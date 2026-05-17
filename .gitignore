@@ -1,0 +1,53 @@
+# Python / Streamlit runtime
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local secrets / env
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# User data and beta runtime data
+data/
+tmp_uploads/
+backups/
+*.fit
+*.FIT
+*.tcx
+*.gpx
+*.log
+
+# TrueCadence local/private runtime files
+profile.json
+self_data.json
+self_data_backup.json
+ai_training_plan_context.json
+beta_feedback.json
+users*.json
+invitation*.json
+activation*.json
+
+# Local backup artifacts / old generated app snapshots
+app.py.*
+*.backup
+*.bak
+*_backup.json
+*_backup.py
+TrueCadence_*.zip
+*.zip
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Deployment temp
+*.tar.gz
+*.sha256
