@@ -1,4 +1,4 @@
-# TrueCadence - 个人版
+﻿# TrueCadence - 个人版
 # 部署:streamlit run app.py
 
 import streamlit as st
@@ -2137,7 +2137,7 @@ def generate_diagnosis(rides, ftp, best, weight=69, feedback=None, sleep_records
     if not strengths:
         strengths.append("目前数据更适合先建立稳定训练画像，优势区间还需要更多高质量记录确认")
     if not weaknesses:
-        weaknesses.append("没有明显单点短板，下一步重点是让训练更系统、更连续")
+        weaknesses.append("当前数据没有暴露明显单点短板，下一阶段可优先关注训练连续性、恢复质量和专项目标匹配")
 
     # Training volume interpretation
     if avg_week_h < 3:
@@ -2275,45 +2275,48 @@ def generate_diagnosis(rides, ftp, best, weight=69, feedback=None, sleep_records
     diagnosis = f"""## 🔍 TrueCadence 骑手诊断报告
 {feedback_badge}{sleep_badge}
 ### 1. 一句话结论
-你当前处于 **{level}**，骑手画像为 **{rider}**。下一阶段最重要的是：**{core_focus}**。
+你当前处于 **{level}**，骑手画像为 **{rider}**。下一阶段可优先关注：**{core_focus}**。
 
-### 2. 当前能力概览
+### 2. 判断依据说明
+以下判断主要基于 FIT 文件中的最佳功率曲线、FTP、训练频率、训练负荷、近期反馈和睡眠/恢复记录。如果没有专门做过冲刺、5分钟、20分钟或60分钟测试，相关结论更适合作为参考方向，不等于能力定论。
+
+### 3. 当前能力概览
 - FTP：**{ftp}W**
 - 功体比：**{wkg} W/kg**（体重 {weight}kg）
 - 数据范围：**{total_rides}** 条记录 / **{total_h}** 小时 / **{total_km}** km
 - 周均训练：约 **{avg_week_h}h/周**、**{avg_week_rides} 次/周**、TSS **{avg_tss_week}/周**
 - 骑手类型：**{rider}**
 
-### 3. 功率能力画像
+### 4. 功率能力画像
 | 区间 | 最佳功率 | 占 FTP | 代表能力 |
 |---|---:|---:|---|
 """
     for name, power, percent, meaning in ability_rows:
         diagnosis += f"| {name} | {power}W | {percent}% | {meaning} |\n"
 
-    diagnosis += "\n### 4. 优势与短板\n"
+    diagnosis += "\n### 5. 优势与关注方向\n"
     diagnosis += "**相对优势**\n"
     for s in strengths[:4]:
         diagnosis += f"- {s}\n"
-    diagnosis += "\n**需要优先改善**\n"
+    diagnosis += "\n**下一阶段建议优先关注**\n"
     for w in weaknesses[:4]:
         diagnosis += f"- {w}\n"
 
-    diagnosis += f"\n### 5. 训练量与一致性判断\n- {volume_comment}\n- 建议目标：{volume_target}\n"
+    diagnosis += f"\n### 6. 训练量与一致性判断\n- {volume_comment}\n- 建议目标：{volume_target}\n"
 
-    diagnosis += "\n### 6. 疲劳抗性\n"
+    diagnosis += "\n### 7. 疲劳抗性\n"
     diagnosis += "\n".join(fatigue_lines) + "\n"
     if strong_zones:
         diagnosis += f"- 优势维持区间：**{', '.join(strong_zones)}**\n"
     if weak_zones:
         diagnosis += f"- 优先补强区间：**{', '.join(weak_zones)}**\n"
 
-    diagnosis += "\n### 7. 接下来 2-4 周训练建议\n"
+    diagnosis += "\n### 8. 接下来 2-4 周训练建议\n"
     for i, item in enumerate(week_plan, 1):
         diagnosis += f"{i}. {item}\n"
     diagnosis += "4. 每周至少安排 1 天完全休息或只做 30-45 分钟 Z1 恢复骑。\n"
 
-    diagnosis += "\n### 8. 主观状态、手表睡眠与恢复风险\n"
+    diagnosis += "\n### 9. 主观状态、手表睡眠与恢复风险\n"
     diagnosis += "**训练反馈**\n"
     if feedback_lines:
         for line in feedback_lines:
@@ -2331,11 +2334,11 @@ def generate_diagnosis(rides, ftp, best, weight=69, feedback=None, sleep_records
     else:
         diagnosis += "- 暂无明显主观/睡眠恢复红旗；如果近期有睡眠差、疼痛或感冒，请先补记。\n"
 
-    diagnosis += "\n### 9. 风险与数据质量提醒\n"
+    diagnosis += "\n### 10. 风险与数据质量提醒\n"
     for r in risk_lines:
         diagnosis += f"- {r}\n"
 
-    diagnosis += "\n### 10. 下一步操作\n"
+    diagnosis += "\n### 11. 下一步操作\n"
     diagnosis += "- 去 **📊 功率仪表盘** 看功率曲线和区间细节。\n"
     diagnosis += "- 如果已解锁 Core，进入 **📋 训练课表** 生成可执行课表。\n"
     diagnosis += "- 在 **👤 骑手档案** 中补充真实 FTP、体重、最大心率和训练目标，后续判断会更准。\n"
@@ -3239,7 +3242,7 @@ elif page == "📤 上传分析":
 
     st.markdown("""
 <div class="upload-cta-note">
-    <b>👇 从这里开始：</b>点击下方按钮选择 FIT 文件，或直接把 FIT 文件拖到上传框里。一次最多 28 个，单次总大小最多 50MB；200MB 是上传控件上限，不代表推荐一次上传。
+    <b>👇 从这里开始：</b>点击下方按钮选择 FIT 文件，或直接把 FIT 文件拖到上传框里。一次最多 28 个，单次总大小最多 50MB；网络不稳定或使用代理时，建议每批 5-10 个 FIT，更稳。
 </div>
 """, unsafe_allow_html=True)
 
@@ -3247,28 +3250,28 @@ elif page == "📤 上传分析":
         "📂 选择或拖拽 FIT 文件",
         type=['fit'],
         accept_multiple_files=True,
-        help="从码表、骑行台或训练平台导出的 .fit 文件。历史最多保留最近 12 周；为保证稳定，一次最多上传 28 个，单次总大小最多 50MB。"
+        help="从码表、骑行台或训练平台导出的 .fit 文件。历史最多保留最近 12 周；为保证稳定，一次最多上传 28 个，单次总大小最多 50MB。网络不稳定或使用代理时，建议每批 5-10 个。"
     )
 
     MAX_FIT_UPLOADS = 28
     MAX_TOTAL_UPLOAD_MB = 50
     if uploaded and len(uploaded) > MAX_FIT_UPLOADS:
         st.error(f"一次最多上传 {MAX_FIT_UPLOADS} 个 FIT 文件。你当前选择了 {len(uploaded)} 个，请分批上传。")
-        st.info("建议按时间顺序分批上传：例如先传最近 28 个，保存后再上传更早的数据。历史最多保留最近 12 周；同日期新上传会覆盖旧记录，系统也会按文件指纹/记录去重。")
+        st.info("建议按时间顺序分批上传：网络不稳定时每批 5-10 个更稳；例如先传最近一批，保存后再上传更早的数据。历史最多保留最近 12 周；同日期新上传会覆盖旧记录，系统也会按文件指纹/记录去重。")
         st.stop()
     if uploaded:
         total_bytes = sum(getattr(f, "size", 0) or 0 for f in uploaded)
         total_mb = total_bytes / 1024 / 1024
         if total_mb > MAX_TOTAL_UPLOAD_MB:
             st.error(f"本次文件总大小约 {total_mb:.1f}MB，超过单次 {MAX_TOTAL_UPLOAD_MB}MB 限制。请分批上传。")
-            st.info("建议先上传最近 4-12 周内最关键的一批 FIT；如果文件很多，可按月份或按最近/更早分批上传。页面里 200MB 是上传控件上限，不代表推荐一次上传。")
+            st.info("建议先上传最近 4-12 周内最关键的一批 FIT；如果文件很多，可按月份或按最近/更早分批上传。网络不稳定时每批 5-10 个更稳。")
             st.stop()
 
     if not uploaded:
         render_empty_data_state(
             "选择 FIT 文件开始建立训练画像",
             "建议一次上传最近 4-12 周的 FIT 文件。数据越完整，FTP 估算、训练负荷、疲劳抗性和 AI 诊断越稳定。",
-            ["展开上方说明，从码表 / Zwift / 训练平台导出 .fit 文件", "一次最多选择 28 个，系统会自动去重合并", "上传后先看功率仪表盘和训练负荷"]
+            ["展开上方说明，从码表 / Zwift / 训练平台导出 .fit 文件", "一次最多选择 28 个；网络不稳定时建议每批 5-10 个，系统会自动去重合并", "上传后先看功率仪表盘和训练负荷"]
         )
         st.stop()
 
@@ -5444,3 +5447,5 @@ with st.sidebar.expander("⚠️ 清除历史上传", expanded=False):
 st.sidebar.divider()
 st.sidebar.caption("TrueCadence v1.0")
 st.sidebar.caption(f"{datetime.date.today()}")
+
+
