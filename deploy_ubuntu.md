@@ -90,9 +90,18 @@ WantedBy=multi-user.target
 权限和启动：
 ```bash
 sudo chown -R www-data:www-data /opt/truecadence/data /opt/truecadence/tmp_uploads
+sudo find /opt/truecadence/data -type d -exec chmod 775 {} +
+sudo find /opt/truecadence/data -type f -name '*.json' -exec chmod 660 {} +
 sudo systemctl daemon-reload
 sudo systemctl enable --now truecadence
 sudo systemctl status truecadence
+```
+
+生产 JSON 写入安全规范见：`docs/production_json_safety.md`。
+修改 `/opt/truecadence/data/*.json` 后必须运行权限检查：
+```bash
+cd /opt/truecadence
+bash scripts/check_data_permissions.sh /opt/truecadence
 ```
 
 ## Nginx 反代
@@ -159,3 +168,19 @@ sudo certbot --nginx -d tcfit.cn -d www.tcfit.cn
 ```bash
 sudo tar -czf /opt/truecadence-backup-$(date +%F).tar.gz /opt/truecadence/data
 ```
+
+## 生产数据修改后的最小安全检查
+
+任何修改 `data/*.json` 的操作完成后，尤其是 `users.json`、`activation_codes.json`、`invitation_codes.json`、`login_sessions.json` 或未来 `sessions.json`，必须执行：
+
+```bash
+cd /opt/truecadence
+bash scripts/check_data_permissions.sh /opt/truecadence
+sudo systemctl restart truecadence
+systemctl is-active truecadence
+curl -sS -o /dev/null -w 'local=%{http_code}\n' http://127.0.0.1:8502/
+curl -k -sS -o /dev/null -w 'https=%{http_code}\n' https://truecadence.cn
+sudo journalctl -u truecadence --since '5 min ago' --no-pager -p warning..alert
+```
+
+若检查失败，不要继续部署；先恢复 owner/mode，并确认服务用户 `www-data` 可读可写。
