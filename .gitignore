@@ -51,3 +51,17 @@ Thumbs.db
 # Deployment temp
 *.tar.gz
 *.sha256
+
+# Local analysis / generated indexes
+.codegraph/
+
+# Local backup snapshots generated during development
+*.before_*
+auth.py.before_*
+auth_bridge.py.before_*
+intervals_oauth.py.before_*
+app.py.before_*
+
+# Payment / private business assets (keep out of public repo unless intentionally published)
+assets/payment_*.jpg
+assets/payment_*.png
