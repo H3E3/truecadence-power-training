@@ -106,6 +106,8 @@ from ui_components import (
     render_training_feedback_intro,
     render_training_feedback_section,
     render_strava_export_note,
+    render_training_load_styles,
+    render_training_load_summary,
     render_upgrade_note,
     render_upload_cta_note,
     render_upload_intro,
@@ -3570,29 +3572,7 @@ elif page == "📈 训练负荷":
     st.title("📈 训练负荷")
     st.caption("判断最近练得是太少、刚好,还是太猛。")
 
-    st.markdown("""
-<style>
-.load-hero {
-    padding: 1.05em 1.1em;
-    border-radius: 15px;
-    margin: 0.8em 0 1em;
-    border: 1px solid rgba(255,107,53,0.28);
-    background: linear-gradient(135deg, rgba(255,107,53,0.14), rgba(22,27,34,0.94));
-}
-.load-eyebrow { color:#ff9a68; font-size:0.76em; font-weight:780; letter-spacing:0.11em; margin-bottom:0.45em; }
-.load-main { color:#f0f6fc; font-size:1.45em; font-weight:820; line-height:1.35; margin-bottom:0.25em; }
-.load-why { color:var(--tc-muted); line-height:1.65; font-size:0.92em; }
-.load-grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:0.75em; margin:0.9em 0 1.1em; }
-.load-card { background:var(--tc-surface); border:1px solid var(--tc-surface-2); border-radius:13px; padding:0.85em; }
-.load-card .k { color:var(--tc-subtle); font-size:0.76em; margin-bottom:0.25em; }
-.load-card .v { color:#f0f6fc; font-size:1.2em; font-weight:780; }
-.load-card .d { color:var(--tc-subtle); font-size:0.78em; margin-top:0.25em; line-height:1.4; }
-.load-panel { background:var(--tc-surface); border:1px solid var(--tc-surface-2); border-radius:14px; padding:1em; margin:0.75em 0; }
-.load-panel-title { color:#f0f6fc; font-weight:760; margin-bottom:0.4em; }
-.load-panel-text { color:#aab6c3; line-height:1.65; font-size:0.9em; }
-@media (max-width: 900px) { .load-grid { grid-template-columns: 1fr; } }
-</style>
-""", unsafe_allow_html=True)
+    render_training_load_styles()
 
     uploaded_rides = st.session_state.get('uploaded_rides', [])
     historical = load_historical()
@@ -3814,37 +3794,37 @@ elif page == "📈 训练负荷":
     reasons = red_flags + caution_flags + good_flags
     reason_text = ";".join(reasons[:4]) if reasons else "训练负荷和今天记录没有明显异常。"
 
-    st.markdown(f"""
-<div class="load-hero">
-    <div class="load-eyebrow">TRAINING LOAD VERDICT</div>
-    <div class="load-main">{status_label}</div>
-    <div class="load-why">{status_tone}<br><b>判断依据:</b>{reason_text}</div>
-</div>
-<div class="load-grid">
-    <div class="load-card"><div class="k">体能 CTL</div><div class="v">{current_ctl}</div><div class="d">约 6 周训练积累</div></div>
-    <div class="load-card"><div class="k">疲劳 ATL</div><div class="v">{current_atl}</div><div class="d">约 1 周近期疲劳</div></div>
-    <div class="load-card"><div class="k">状态 TSB</div><div class="v">{current_tsb}</div><div class="d">CTL - ATL,新鲜度</div></div>
-    <div class="load-card"><div class="k">近 7 天</div><div class="v">{tss_7} TSS</div><div class="d">{hours_7} 小时训练</div></div>
-</div>
-<div class="load-grid">
-    <div class="load-card"><div class="k">近 28 天</div><div class="v">{tss_28} TSS</div><div class="d">{hours_28} 小时训练</div></div>
-    <div class="load-card"><div class="k">近 42 天</div><div class="v">{tss_42} TSS</div><div class="d">{hours_42} 小时训练</div></div>
-    <div class="load-card"><div class="k">周均训练</div><div class="v">{avg_weekly_hours}h</div><div class="d">近 28 天折算</div></div>
-    <div class="load-card"><div class="k">CTL 变化</div><div class="v">{round(ramp_rate)}</div><div class="d">近 7 天变化</div></div>
-</div>
-<div class="load-grid">
-    <div class="load-card"><div class="k">数据跨度</div><div class="v">{data_span_days} 天</div><div class="d">历史负荷可信度基础</div></div>
-    <div class="load-card"><div class="k">历史 / 本次 TSS</div><div class="v">{history_tss} / {upload_tss}</div><div class="d">本次只作为累计负荷贡献</div></div>
-    <div class="load-card"><div class="k">单次最新贡献</div><div class="v">{latest_ride_tss} TSS</div><div class="d">不再孤立判断训练负荷</div></div>
-    <div class="load-card"><div class="k">风险档位</div><div class="v">{risk_mode}</div><div class="d">{risk_desc}</div></div>
-</div>
-<div class="load-grid">
-    <div class="load-card"><div class="k">主观反馈</div><div class="v">{len(recent_feedback)} 条</div><div class="d">睡眠 {avg_sleep or '-'} / 腿疲劳 {avg_fatigue or '-'}</div></div>
-    <div class="load-card"><div class="k">TSB 阈值</div><div class="v">{thresholds['tsb_caution']} / {thresholds['tsb_red']}</div><div class="d">黄色 / 红色提醒线</div></div>
-    <div class="load-card"><div class="k">ATL-CTL 阈值</div><div class="v">+{thresholds['atl_caution']} / +{thresholds['atl_red']}</div><div class="d">黄色 / 红色提醒线</div></div>
-    <div class="load-card"><div class="k">主观疲劳阈值</div><div class="v">{thresholds['fatigue_caution']} / {thresholds['fatigue_red']}</div><div class="d">黄色 / 红色提醒线</div></div>
-</div>
-""", unsafe_allow_html=True)
+    render_training_load_summary(
+        status_label,
+        status_tone,
+        reason_text,
+        current_ctl,
+        current_atl,
+        current_tsb,
+        tss_7,
+        hours_7,
+        tss_28,
+        hours_28,
+        tss_42,
+        hours_42,
+        avg_weekly_hours,
+        ramp_rate,
+        data_span_days,
+        history_tss,
+        upload_tss,
+        latest_ride_tss,
+        risk_mode,
+        risk_desc,
+        len(recent_feedback),
+        avg_sleep,
+        avg_fatigue,
+        thresholds['tsb_caution'],
+        thresholds['tsb_red'],
+        thresholds['atl_caution'],
+        thresholds['atl_red'],
+        thresholds['fatigue_caution'],
+        thresholds['fatigue_red'],
+    )
 
     c1, c2 = st.columns([1.05, 1])
     if stale_notes:
