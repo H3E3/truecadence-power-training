@@ -216,3 +216,142 @@ def render_upgrade_note():
     如果你只是想体验,Free 足够;如果你想真正开始按计划训练,建议从 Core 开始。
 </div>
 """, unsafe_allow_html=True)
+
+
+
+def render_upload_intro():
+    st.markdown("""
+<style>
+.upload-hero {
+    padding: 1.25em 1.1em;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(255,107,53,0.12), rgba(22,27,34,0.92));
+    border: 1px solid rgba(255,107,53,0.22);
+    margin-bottom: 1em;
+}
+.upload-hero-title {
+    color: #f0f6fc;
+    font-size: 1.18em;
+    font-weight: 720;
+    margin-bottom: 0.35em;
+}
+.upload-hero-text {
+    color: #aab6c3;
+    font-size: 0.92em;
+    line-height: 1.65;
+}
+.upload-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8em;
+    margin: 0.9em 0 1.1em;
+}
+.upload-card {
+    background: var(--tc-surface);
+    border: 1px solid var(--tc-surface-2);
+    border-radius: 12px;
+    padding: 0.95em;
+    min-height: 112px;
+}
+.upload-card .title {
+    color: #f0f6fc;
+    font-weight: 700;
+    margin-bottom: 0.35em;
+}
+.upload-card .text {
+    color: var(--tc-subtle);
+    font-size: 0.84em;
+    line-height: 1.55;
+}
+.upload-next {
+    background: rgba(35,134,54,0.08);
+    border: 1px solid rgba(35,134,54,0.28);
+    border-radius: 12px;
+    padding: 0.95em 1em;
+    margin-top: 0.9em;
+}
+.upload-next .title {
+    color: #7ee787;
+    font-weight: 720;
+    margin-bottom: 0.35em;
+}
+.upload-next .text {
+    color: var(--tc-muted);
+    font-size: 0.9em;
+    line-height: 1.7;
+}
+/* Make Streamlit file uploader look like the primary action on this page. */
+[data-testid="stFileUploader"] {
+    margin: 1.0em 0 1.1em;
+    padding: 1.05em 1.08em;
+    border-radius: 18px;
+    border: 1.5px dashed rgba(255,107,53,0.66);
+    background:
+        radial-gradient(circle at 18% 10%, rgba(255,255,255,0.10), transparent 30%),
+        linear-gradient(135deg, rgba(255,107,53,0.20), rgba(22,27,34,0.97));
+    box-shadow: 0 0 28px rgba(255,107,53,0.13), inset 0 0 16px rgba(255,107,53,0.05);
+}
+[data-testid="stFileUploader"] label,
+[data-testid="stFileUploader"] label p {
+    color: #f0f6fc !important;
+    font-size: 1.08rem !important;
+    font-weight: 850 !important;
+}
+[data-testid="stFileUploader"] section {
+    border-color: rgba(255,107,53,0.42) !important;
+    background: rgba(255,255,255,0.035) !important;
+    border-radius: 14px !important;
+}
+[data-testid="stFileUploader"] button {
+    background: linear-gradient(135deg, #ff7a3d, #ff5a1f) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
+    border-radius: 999px !important;
+    font-weight: 850 !important;
+    box-shadow: 0 0 16px rgba(255,107,53,0.42) !important;
+}
+.upload-cta-note {
+    margin: 0.9em 0 -0.25em;
+    padding: 0.9em 1em;
+    border-radius: 14px;
+    background: rgba(255,107,53,0.10);
+    border: 1px solid rgba(255,107,53,0.26);
+    color: #d8dee9;
+    line-height: 1.65;
+    font-size: 0.92em;
+}
+.upload-cta-note b { color:#ffb088; }
+@media (max-width: 900px) {
+    .upload-grid { grid-template-columns: 1fr; }
+}
+</style>
+<div class="upload-hero">
+    <div class="upload-hero-title">第一步:把你的真实骑行数据放进来</div>
+    <div class="upload-hero-text">
+        建议一次上传最近 4-12 周的 FIT 文件。数据越完整,FTP 估算、功率曲线、疲劳抗性和后续 AI 诊断会越稳定。
+        如果只有 1-3 次骑行,也可以先上传体验基础分析。
+    </div>
+</div>
+<div class="upload-grid">
+    <div class="upload-card">
+        <div class="title">⚡ 功率数据</div>
+        <div class="text">用于计算 FTP、功率持续曲线、冲刺能力、20min/60min 能力和疲劳抗性。</div>
+    </div>
+    <div class="upload-card">
+        <div class="title">❤️ 心率数据</div>
+        <div class="text">用于辅助判断强度反应、恢复压力和训练负荷是否合理。</div>
+    </div>
+    <div class="upload-card">
+        <div class="title">📈 训练负荷</div>
+        <div class="text">用于生成 TSS、PMC、周训练量趋势,并为训练课表提供依据。</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+
+def render_upload_cta_note():
+    st.markdown("""
+<div class="upload-cta-note">
+    <b>👇 从这里开始:</b>点击下方按钮选择 FIT 文件,或直接把 FIT 文件拖到上传框里。一次最多 28 个,单次总大小最多 50MB;网络不稳定或使用代理时,建议每批 5-10 个 FIT,更稳。
+</div>
+""", unsafe_allow_html=True)
