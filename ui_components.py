@@ -673,6 +673,56 @@ def render_power_ftp_reference(actual_ftp, est_ftp, ftp, pweight, ftp_detail, be
 
 
 
+def render_power_profile_and_durability(fatigue, durability_summary, profile_rows, peer_sample_count, min_peer_samples, total_ride_count):
+    st.subheader("⚡ 功率画像 - 固定参考线 / 同水平分位数")
+    if any(v.get('rating_source') == 'peer_percentile' for v in fatigue.values()):
+        st.caption("当前评级优先采用同 FTP W/kg 水平用户分位数;固定参考线保留为解释和兜底。")
+    else:
+        st.caption(f"当前同水平样本量不足({peer_sample_count}/{min_peer_samples}),评级暂用 TrueCadence 内测固定参考线;样本积累后会自动切换为同水平用户分位数。")
+    if profile_rows:
+        st.dataframe(pd.DataFrame(profile_rows).astype(str), use_container_width=True, hide_index=True)
+    st.caption("短时窗口更看 W/kg 分位数;20min/60min 更看占 FTP 比例。FIT 数据如果没有做过对应时长全力测试,画像只代表已上传数据里的可见能力。")
+
+    st.subheader("🔋 疲劳抗性 2.0 - 后程还能不能输出")
+    st.caption("上半部分看功率曲线持续能力;下半部分在新上传 FIT 有逐点功率时,会进一步判断后半程保持能力。后程可分析骑行只统计时长和逐点功率足够计算后程保持的记录;短骑或数据不足记录不会计入。")
+
+    if durability_summary:
+        b = durability_summary['best_score']
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            render_mini_metric_card("后程保持评分", f"{durability_summary['avg_score']}", "多次骑行平均")
+        with c2:
+            render_mini_metric_card("平均后半程衰减", f"{durability_summary['avg_drop']}%")
+        with c3:
+            render_mini_metric_card("最佳单次评级", b.get('rating', '-'), f"{b.get('score', 0)} 分")
+        with c4:
+            render_mini_metric_card("后程可分析骑行", f"{durability_summary['count']} 条", f"总记录 {total_ride_count} 条")
+        render_vertical_spacer(14)
+        dur_rows = []
+        for x in durability_summary['items'][:8]:
+            dur_rows.append({
+                '日期': x.get('date', ''),
+                '时长': f"{x.get('duration_min', 0)} min",
+                '评分': x.get('score', 0),
+                '评级': x.get('rating', ''),
+                '后半程衰减': f"{x.get('half_drop_pct', 0)}%",
+                '后半程5min保持': f"{x.get('late_5m_retention', 0)}%",
+                '后半程20min保持': f"{x.get('late_20m_retention', 0)}%" if x.get('late_20m_retention') else '-',
+                '60min后5min': f"{x.get('after_60_5m', 0)}W" if x.get('after_60_5m') else '-',
+                '60min后20min': f"{x.get('after_60_20m', 0)}W" if x.get('after_60_20m') else '-',
+            })
+        st.dataframe(pd.DataFrame(dur_rows).astype(str), use_container_width=True, hide_index=True)
+        if durability_summary['avg_score'] >= 86:
+            st.success("后程保持能力较好:长距离或训练后段仍能保留较高输出,可以逐步加入更专项的后段质量刺激。")
+        elif durability_summary['avg_score'] >= 78:
+            st.info("后程保持能力中等:基础耐力可以,但长骑后段的甜区/阈值保持仍有提升空间。")
+        else:
+            st.warning("后程保持能力偏弱:建议先补 Z2 长距离、甜区耐力和补给策略,不要过早堆高强度。")
+    else:
+        st.info("疲劳抗性 2.0 需要新上传的 FIT 包含逐点功率数据。旧历史摘要仍可显示功率曲线评分;重新上传最近 4-12 周 FIT 后会更准。")
+
+
+
 def render_power_dashboard_top_metrics(ftp, pweight, best, ride_count):
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     wkg = round(ftp / pweight, 1) if ftp and pweight else 0
