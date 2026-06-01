@@ -1026,3 +1026,38 @@ def render_plan_summary_cards(pm, ftp, wkg, weight, first, key_text, load_note):
   <div class="plan-card"><div class="k">关键训练</div><div class="v" style="font-size:.96em;">{key_text}</div><div class="d">{load_note}</div></div>
 </div>
 """, unsafe_allow_html=True)
+
+
+
+def render_goal_phase_path(phase_rows):
+    st.subheader("阶段路径")
+    st.dataframe(pd.DataFrame(phase_rows).astype(str), use_container_width=True, hide_index=True)
+
+
+def render_goal_action_and_risk(actions, risk_flags, feasible, ftp, ftp_gap, target_ftp):
+    c_left, c_right = st.columns([1.05, 1])
+    with c_left:
+        st.subheader("本周动作")
+        for a_item in actions:
+            st.markdown(f"- {a_item}")
+    with c_right:
+        st.subheader("风险与调整")
+        if risk_flags:
+            for r in risk_flags:
+                st.warning(r)
+        else:
+            st.success("当前目标没有明显红旗。")
+        if not feasible:
+            mid = round(ftp + max(0, ftp_gap) / 2)
+            st.info(f"建议中间目标:先到 **{mid}W**,稳定 2-3 周后再冲 **{target_ftp}W**。")
+        st.caption("目标估算不是承诺值。真正决定进度的是连续性、恢复、补给和训练执行质量。")
+
+
+def render_goal_reassessment_notes():
+    st.subheader("什么时候重新评估")
+    st.markdown("""
+- **每 4 周**:重新看 FTP、CTL/ATL/TSB 和最近反馈。
+- **连续两周疲劳高或睡眠差**:目标不一定错,但推进速度要降。
+- **比赛前 7-10 天**:不再追训练量,改为保持状态和降低疲劳。
+- **疼痛重复出现**:先处理身体/装备/姿势,不要继续用训练计划硬压。
+""")

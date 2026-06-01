@@ -97,6 +97,9 @@ from ui_components import (
     render_ai_usage_panel,
     render_beta_feedback_intro,
     render_empty_data_state,
+    render_goal_action_and_risk,
+    render_goal_phase_path,
+    render_goal_reassessment_notes,
     render_goal_styles,
     render_goal_verdict_summary,
     render_icp_footer as render_icp_footer_widget,
@@ -5354,7 +5357,6 @@ elif page == "🎯 目标追踪":
     progress = min(max(ftp / target_ftp, 0), 1) if target_ftp else 0
     st.progress(progress, f"当前进度:{round(progress*100)}%|还差 {max(0, ftp_gap)}W / {max(0, wkg_gap)} W/kg")
 
-    st.subheader("阶段路径")
     phase_rows = []
     phase_count = max(1, target_weeks_n // 4)
     for i in range(1, phase_count + 1):
@@ -5376,44 +5378,22 @@ elif page == "🎯 目标追踪":
         elif goal_type == "减脂不掉功率":
             focus = "控体重:Z2 稳定输出,强度课前后不缺碳水"
         phase_rows.append({"阶段": f"第 {max(1, wk-3)}-{wk} 周", "目标": f"FTP ~{phase_target}W / {round(phase_target/weight,1)} W/kg", "训练重点": focus, "风险提醒": risk})
-    st.dataframe(pd.DataFrame(phase_rows).astype(str), use_container_width=True, hide_index=True)
+    render_goal_phase_path(phase_rows)
 
-    c_left, c_right = st.columns([1.05, 1])
-    with c_left:
-        st.subheader("本周动作")
-        if weekly_h <= 4:
-            actions = ["完成 3 次骑行,比单次骑很猛更重要", "全部以 Z2/轻松骑为主", "本周不要追 FTP 测试"]
-        elif goal_type in ["提升 FTP", "提升 W/kg"]:
-            actions = ["安排 1 次阈值/甜区质量课", "安排 1 次 2h 左右 Z2", "其余训练保持低强度,不要把恢复骑骑成强度课"]
-        elif goal_type == "比赛备战":
-            actions = ["安排 1 次比赛模拟或节奏变化训练", "至少 1 次补给演练", "保留 1-2 天恢复窗口"]
-        elif goal_type == "长距离耐力":
-            actions = ["最长单次比上周增加不超过 10-15%", "从前 20 分钟开始补给", "关注后半程功率是否明显掉"]
-        elif goal_type == "减脂不掉功率":
-            actions = ["不要在质量课前低碳", "用 Z2 增加能量消耗", "每周体重下降不宜过快"]
-        else:
-            actions = ["先恢复规律训练频率", "只做轻到中等强度", "连续 2 周稳定后再提高目标"]
-        for a_item in actions:
-            st.markdown(f"- {a_item}")
-    with c_right:
-        st.subheader("风险与调整")
-        if risk_flags:
-            for r in risk_flags:
-                st.warning(r)
-        else:
-            st.success("当前目标没有明显红旗。")
-        if not feasible:
-            mid = round(ftp + max(0, ftp_gap) / 2)
-            st.info(f"建议中间目标:先到 **{mid}W**,稳定 2-3 周后再冲 **{target_ftp}W**。")
-        st.caption("目标估算不是承诺值。真正决定进度的是连续性、恢复、补给和训练执行质量。")
-
-    st.subheader("什么时候重新评估")
-    st.markdown("""
-- **每 4 周**:重新看 FTP、CTL/ATL/TSB 和最近反馈。
-- **连续两周疲劳高或睡眠差**:目标不一定错,但推进速度要降。
-- **比赛前 7-10 天**:不再追训练量,改为保持状态和降低疲劳。
-- **疼痛重复出现**:先处理身体/装备/姿势,不要继续用训练计划硬压。
-""")
+    if weekly_h <= 4:
+        actions = ["完成 3 次骑行,比单次骑很猛更重要", "全部以 Z2/轻松骑为主", "本周不要追 FTP 测试"]
+    elif goal_type in ["提升 FTP", "提升 W/kg"]:
+        actions = ["安排 1 次阈值/甜区质量课", "安排 1 次 2h 左右 Z2", "其余训练保持低强度,不要把恢复骑骑成强度课"]
+    elif goal_type == "比赛备战":
+        actions = ["安排 1 次比赛模拟或节奏变化训练", "至少 1 次补给演练", "保留 1-2 天恢复窗口"]
+    elif goal_type == "长距离耐力":
+        actions = ["最长单次比上周增加不超过 10-15%", "从前 20 分钟开始补给", "关注后半程功率是否明显掉"]
+    elif goal_type == "减脂不掉功率":
+        actions = ["不要在质量课前低碳", "用 Z2 增加能量消耗", "每周体重下降不宜过快"]
+    else:
+        actions = ["先恢复规律训练频率", "只做轻到中等强度", "连续 2 周稳定后再提高目标"]
+    render_goal_action_and_risk(actions, risk_flags, feasible, ftp, ftp_gap, target_ftp)
+    render_goal_reassessment_notes()
 
 st.sidebar.caption("TrueCadence v1.0")
 st.sidebar.caption(f"{datetime.date.today()}")
