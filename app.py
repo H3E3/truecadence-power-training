@@ -95,6 +95,8 @@ from ui_components import (
     render_beta_feedback_intro,
     render_empty_data_state,
     render_icp_footer as render_icp_footer_widget,
+    render_intervals_manual_import_note,
+    render_intervals_oauth_import_note,
     render_mini_metric_card,
     render_danger_note,
     render_pricing_intro,
@@ -103,6 +105,7 @@ from ui_components import (
     render_profile_section_title,
     render_training_feedback_intro,
     render_training_feedback_section,
+    render_strava_export_note,
     render_upgrade_note,
     render_upload_cta_note,
     render_upload_intro,
@@ -2860,11 +2863,7 @@ elif page == "🔗 数据导入":
     import_source = st.selectbox("选择导入来源", ["Intervals.icu", "Strava(正在申请中...)"], key="data_import_source")
 
     if import_source == "Intervals.icu":
-        st.markdown("""
-<div class="upload-cta-note">
-<b>Intervals.icu 外部入口:</b>当前为内测临时手动导入方式。如果你还没打开 Intervals.icu,请先登录并进入设置页复制 Athlete ID 与 Personal API Key,然后回到本页导入。正式多用户版本会优先改为 OAuth 授权,不长期要求用户手动填写 API Key。
-</div>
-""", unsafe_allow_html=True)
+        render_intervals_manual_import_note()
         icu_jump_1, icu_jump_2 = st.columns([1, 1])
         with icu_jump_1:
             st.link_button("打开 Intervals.icu", "https://intervals.icu/", type="primary", use_container_width=True)
@@ -2872,11 +2871,7 @@ elif page == "🔗 数据导入":
             st.link_button("打开 Intervals 设置", "https://intervals.icu/settings", type="primary", use_container_width=True)
 
     if import_source == "Strava(正在申请中...)":
-        st.markdown("""
-<div class="upload-cta-note">
-<b>Strava 外部入口:</b>Strava OAuth 正在申请接入。当前可先打开 Strava 导出 FIT,再回到 TrueCadence 的 FIT 上传页面分析。
-</div>
-""", unsafe_allow_html=True)
+        render_strava_export_note()
         strava_jump_1, strava_jump_2 = st.columns([1, 1])
         with strava_jump_1:
             st.link_button("打开 Strava", "https://www.strava.com/", type="primary", use_container_width=True)
@@ -2913,11 +2908,7 @@ elif page == "🔗 数据导入":
         st.stop()
 
     st.subheader("Intervals.icu")
-    st.markdown("""
-<div class="upload-cta-note">
-<b>Intervals.icu 外部入口：</b>现在支持一键 OAuth 授权导入，点击下方按钮授权后即可自动导入活动，不再需要手动填写 API Key。
-</div>
-""", unsafe_allow_html=True)
+    render_intervals_oauth_import_note()
 
     # ─── OAuth connect / disconnect ───
     from intervals_oauth import get_token, is_connected, get_authorize_url, disconnect_user
@@ -2925,12 +2916,15 @@ elif page == "🔗 数据导入":
     oauth_token = get_token(user_id_oauth) if user_id_oauth else None
     oauth_connected = bool(oauth_token)
 
+    local_import_test_mode = os.environ.get("TRUECADENCE_DEPLOY_MODE", "local").lower() != "production"
     if oauth_connected:
         st.success("✅ 已连接 Intervals.icu（OAuth 授权）")
         if st.button("断开 Intervals.icu 连接", key="intervals_oauth_disconnect", use_container_width=True):
             disconnect_user(user_id_oauth)
             st.success("已断开 Intervals.icu 连接。")
             st.rerun()
+    elif local_import_test_mode:
+        st.info("本地测试模式：OAuth 授权按钮已隐藏，避免跳转到生产服务器。请使用下方 Personal API Key 方式读取和导入 Intervals 活动。")
     else:
         authorize_url, _ = get_authorize_url(user_id_oauth)
         st.markdown(f"""
@@ -3077,6 +3071,7 @@ elif page == "🔗 数据导入":
         if st.button("下载并导入选中活动", disabled=st.session_state.get("intervals_import_busy") or not selected_ids or not intervals_can_read or not athlete_id):
             st.session_state["intervals_import_busy"] = True
             st.session_state["intervals_pending_ids"] = selected_ids
+            _set_nav("导入数据", "平台导入")
             st.rerun()
 
         pending_ids = st.session_state.get("intervals_pending_ids") or []
@@ -3135,6 +3130,7 @@ elif page == "🔗 数据导入":
                 st.session_state.pop("intervals_import_busy", None)
                 st.session_state.pop("intervals_pending_ids", None)
                 st.cache_data.clear()
+                _set_nav("导入数据", "平台导入")
                 st.rerun()
             else:
                 st.session_state.pop("intervals_import_busy", None)

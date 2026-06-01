@@ -508,3 +508,28 @@ def render_beta_feedback_intro():
   3. 如果以后付费,你觉得哪个功能最值得付费?多少钱能接受?
 </div>
 """, unsafe_allow_html=True)
+
+
+
+def render_intervals_manual_import_note():
+    st.markdown("""
+<div class="upload-cta-note">
+<b>Intervals.icu 外部入口:</b>当前为内测临时手动导入方式。如果你还没打开 Intervals.icu,请先登录并进入设置页复制 Athlete ID 与 Personal API Key,然后回到本页导入。正式多用户版本会优先改为 OAuth 授权,不长期要求用户手动填写 API Key。
+</div>
+""", unsafe_allow_html=True)
+
+
+def render_strava_export_note():
+    st.markdown("""
+<div class="upload-cta-note">
+<b>Strava 外部入口:</b>Strava OAuth 正在申请接入。当前可先打开 Strava 导出 FIT,再回到 TrueCadence 的 FIT 上传页面分析。
+</div>
+""", unsafe_allow_html=True)
+
+
+def render_intervals_oauth_import_note():
+    st.markdown("""
+<div class="upload-cta-note">
+<b>Intervals.icu 导入：</b>本地测试建议优先使用下方 Personal API Key 方式读取和导入活动，避免 OAuth 授权跳到生产服务器。线上版本才使用一键 OAuth 授权。
+</div>
+""", unsafe_allow_html=True)
