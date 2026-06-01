@@ -656,3 +656,69 @@ def render_power_dashboard_top_metrics(ftp, pweight, best, ride_count):
 
 def render_vertical_spacer(height_px: int = 12):
     st.markdown(f'<div style="height:{int(height_px)}px"></div>', unsafe_allow_html=True)
+
+
+
+def render_nutrition_intro():
+    st.markdown("""
+<style>
+.nutrition-hero {
+    padding: 1.15em 1.1em;
+    border-radius: 15px;
+    background: linear-gradient(135deg, rgba(255,107,53,0.13), rgba(22,27,34,0.94));
+    border: 1px solid rgba(255,107,53,0.25);
+    margin: 0.8em 0 1em;
+}
+.nutrition-title { color:#f0f6fc; font-size:1.15em; font-weight:760; margin-bottom:0.35em; }
+.nutrition-text { color:#aab6c3; font-size:0.9em; line-height:1.65; }
+.nutrition-grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:0.75em; margin:0.9em 0 1.1em; }
+.nutrition-card { background:var(--tc-surface); border:1px solid var(--tc-surface-2); border-radius:13px; padding:0.85em; }
+.nutrition-card .k { color:var(--tc-subtle); font-size:0.76em; margin-bottom:0.25em; }
+.nutrition-card .v { color:#f0f6fc; font-size:1.18em; font-weight:760; }
+.nutrition-card .d { color:var(--tc-subtle); font-size:0.78em; margin-top:0.25em; line-height:1.4; }
+.nutrition-advice { border-radius:16px; padding:1.05em 1.1em; margin:1em 0; border:1px solid rgba(255,107,53,0.34); background:linear-gradient(135deg, rgba(255,107,53,0.16), rgba(22,27,34,0.95)); }
+.nutrition-advice .tag { color:#ff9a68; font-size:0.78em; font-weight:760; letter-spacing:0.08em; margin-bottom:0.4em; }
+.nutrition-advice .main { font-size:1.38em; font-weight:800; color:#f0f6fc; margin-bottom:0.35em; }
+.nutrition-advice .why { color:var(--tc-muted); line-height:1.65; font-size:0.92em; }
+@media (max-width: 900px) { .nutrition-grid { grid-template-columns: 1fr; } }
+</style>
+<div class="nutrition-hero">
+    <div class="nutrition-title">补给不是吃得越多越好,而是刚好支持今天的输出</div>
+    <div class="nutrition-text">系统会根据体重、训练时长、强度、天气和训练反馈,给出每小时碳水、水、钠,以及训练前/中/后的执行建议。</div>
+</div>
+""", unsafe_allow_html=True)
+
+
+def render_nutrition_target(
+    carb_lo,
+    carb_hi,
+    water_lo,
+    water_hi,
+    sodium_lo,
+    sodium_hi,
+    workout_type,
+    ride_hours,
+    environment,
+    weight,
+    intensity_note,
+    total_carb_lo,
+    total_carb_hi,
+    total_water_lo,
+    total_water_hi,
+    total_sodium_lo,
+    total_sodium_hi,
+    feedback_count,
+):
+    st.markdown(f"""
+<div class="nutrition-advice">
+    <div class="tag">TODAY FUELING TARGET</div>
+    <div class="main">每小时 {carb_lo}-{carb_hi}g 碳水 · {water_lo}-{water_hi}ml 水 · {sodium_lo}-{sodium_hi}mg 钠</div>
+    <div class="why"><b>依据:</b>{workout_type}|{ride_hours}h|{environment}|体重 {weight}kg。{intensity_note}</div>
+</div>
+<div class="nutrition-grid">
+    <div class="nutrition-card"><div class="k">本次总碳水</div><div class="v">{total_carb_lo}-{total_carb_hi}g</div><div class="d">约 {max(0, round(total_carb_lo/25))}-{max(1, round(total_carb_hi/25))} 根能量胶</div></div>
+    <div class="nutrition-card"><div class="k">本次总饮水</div><div class="v">{total_water_lo}-{total_water_hi}ml</div><div class="d">分 15-20 分钟小口喝</div></div>
+    <div class="nutrition-card"><div class="k">本次总钠</div><div class="v">{total_sodium_lo}-{total_sodium_hi}mg</div><div class="d">热天/室内优先补足</div></div>
+    <div class="nutrition-card"><div class="k">反馈接入</div><div class="v">{feedback_count} 条</div><div class="d">低血糖/胃不适/高温会修正建议</div></div>
+</div>
+""", unsafe_allow_html=True)
