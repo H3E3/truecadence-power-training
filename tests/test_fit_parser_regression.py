@@ -181,8 +181,8 @@ def main() -> int:
     paths = [Path(p).expanduser() for p in args.files] if args.files else default_candidates()
     paths = [p for p in paths if p.exists() and p.suffix.lower() == ".fit"]
     if not paths:
-        print("No FIT samples found. Put samples under tests/fixtures/fit/ or pass paths explicitly.")
-        return 2
+        print("SKIP: no FIT samples found. Put private samples under tests/fixtures/fit/ or pass paths explicitly.")
+        return 0
 
     failures = []
     for path in paths:
