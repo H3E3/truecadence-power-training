@@ -1,5 +1,7 @@
 # TrueCadence Ubuntu 内测部署清单
 
+> AI coding discipline: before code/data/server changes, also follow `docs/ai_coding_discipline.md` for Karpathy-style rules: think before coding, simplicity first, surgical changes, and goal-driven verification.
+
 ## 推荐服务器
 - Ubuntu 22.04 LTS
 - 2核 / 4GB / 40GB+ SSD

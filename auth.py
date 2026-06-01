@@ -11,6 +11,7 @@ DATA_DIR = Path(os.environ.get("TRUECADENCE_DATA_DIR", APP_DIR / "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 USERS_FILE = DATA_DIR / "users.json"
+ORDERS_FILE = DATA_DIR / "orders.json"
 
 # Plan definitions
 # Tiers: free → core → pro → coach
@@ -204,13 +205,13 @@ def delete_rider(user_id: str, rider_name: str) -> tuple[bool, str]:
 
 
 def add_subscription_days(user_id: str, days: int, plan: str = "basic"):
-    """Admin: add days to a user's subscription."""
+    """Admin/payment: add days to a user's subscription."""
     users = load_users()
     if user_id not in users:
         return False
     u = users[user_id]
-    # If upgrading to a different plan, reset from today
-    # If renewing same plan, extend from current expiry
+    # If upgrading to a different plan, reset from today.
+    # If renewing same plan, extend from current expiry.
     old_plan = u.get("plan", "")
     if old_plan != plan:
         expire_date = datetime.date.today()
@@ -225,6 +226,147 @@ def add_subscription_days(user_id: str, days: int, plan: str = "basic"):
     u["duration"] = f"{days}天"
     save_users(users)
     return True
+
+
+# ─── Orders / Manual Payment MVP ───
+
+def load_orders() -> dict:
+    if ORDERS_FILE.exists():
+        with open(ORDERS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    return {}
+
+
+def save_orders(orders: dict):
+    with open(ORDERS_FILE, "w", encoding="utf-8") as f:
+        json.dump(orders, f, ensure_ascii=False, indent=2)
+
+
+def generate_order_id() -> str:
+    import random
+    now = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    return "TC" + now + f"{random.randint(0, 999):03d}"
+
+
+def create_order(user_id: str, plan: str, duration_label: str, payment_method: str = "manual_wechat") -> tuple[bool, str, dict | None]:
+    """Create a pending manual-payment order. Returns (ok, message/order_id, order).
+
+    Price/days are always read from server-side PLANS at creation time. The UI never sends
+    trusted amount fields, preventing a stale widget state from buying a higher plan at a lower price.
+    """
+    users = load_users()
+    plan = str(plan or "").strip().lower()
+    duration_label = str(duration_label or "").strip()
+    if user_id not in users:
+        return False, "用户不存在", None
+    if plan not in PLANS or plan == "free":
+        return False, "无效套餐", None
+    duration = PLANS[plan].get("durations", {}).get(duration_label)
+    if not duration:
+        return False, "无效付费周期", None
+
+    orders = load_orders()
+    order_id = generate_order_id()
+    while order_id in orders:
+        order_id = generate_order_id()
+
+    now = datetime.datetime.now().isoformat(timespec="seconds")
+    user = users[user_id]
+    order = {
+        "order_id": order_id,
+        "user_id": user_id,
+        "phone": user.get("phone", ""),
+        "plan": plan,
+        "plan_name": PLANS[plan]["name"],
+        "duration_label": duration_label,
+        "days": int(duration.get("days", 0)),
+        "amount": float(duration.get("price", 0)),
+        "currency": "CNY",
+        "status": "pending",
+        "payment_method": payment_method,
+        "created_at": now,
+        "paid_at": None,
+        "confirmed_by": None,
+        "confirmed_at": None,
+        "expires_at_after_paid": None,
+        "note": "人工收款确认后开通",
+    }
+    orders[order_id] = order
+    save_orders(orders)
+    return True, order_id, order
+
+
+def get_user_orders(user_id: str, include_hidden: bool = False) -> list:
+    orders = load_orders()
+    rows = [o for o in orders.values() if o.get("user_id") == user_id]
+    if not include_hidden:
+        rows = [o for o in rows if not o.get("hidden_by_user")]
+    rows.sort(key=lambda o: o.get("created_at", ""), reverse=True)
+    return rows
+
+
+def update_order_status(order_id: str, status: str, admin_id: str = "", note: str = "") -> tuple[bool, str]:
+    orders = load_orders()
+    if order_id not in orders:
+        return False, "订单不存在"
+    if status not in ("pending", "paid", "cancelled", "refunded", "expired"):
+        return False, "无效订单状态"
+    order = orders[order_id]
+    order["status"] = status
+    order["updated_at"] = datetime.datetime.now().isoformat(timespec="seconds")
+    if note:
+        order["admin_note"] = note
+    if admin_id:
+        order["updated_by"] = admin_id
+    save_orders(orders)
+    return True, "订单状态已更新"
+
+
+def hide_order_for_user(order_id: str, user_id: str) -> tuple[bool, str]:
+    """User-side delete: hide the order from user's order list while keeping admin audit record."""
+    orders = load_orders()
+    if order_id not in orders:
+        return False, "订单不存在"
+    order = orders[order_id]
+    if order.get("user_id") != user_id:
+        return False, "无权操作该订单"
+    now = datetime.datetime.now().isoformat(timespec="seconds")
+    if order.get("status") == "pending":
+        order["status"] = "cancelled"
+        order["cancelled_at"] = now
+        order["cancelled_by"] = user_id
+    order["hidden_by_user"] = True
+    order["hidden_by_user_at"] = now
+    save_orders(orders)
+    return True, "订单已从你的订单列表移除"
+
+
+def confirm_order_paid(order_id: str, admin_id: str = "") -> tuple[bool, str]:
+    """Mark order paid and grant subscription days. Idempotent for already-paid orders."""
+    orders = load_orders()
+    if order_id not in orders:
+        return False, "订单不存在"
+    order = orders[order_id]
+    if order.get("status") == "paid":
+        return True, "订单已是已支付状态"
+    if order.get("status") not in ("pending", "expired"):
+        return False, f"当前状态不能确认付款：{order.get('status')}"
+
+    ok = add_subscription_days(order.get("user_id", ""), int(order.get("days", 0)), order.get("plan", ""))
+    if not ok:
+        return False, "用户不存在，无法开通套餐"
+
+    users = load_users()
+    user = users.get(order.get("user_id", ""), {})
+    now = datetime.datetime.now().isoformat(timespec="seconds")
+    order["status"] = "paid"
+    order["paid_at"] = now
+    order["confirmed_at"] = now
+    order["confirmed_by"] = admin_id
+    order["expires_at_after_paid"] = user.get("expires")
+    save_orders(orders)
+    return True, f"已确认收款并开通 {order.get('plan_name')}，有效期至 {user.get('expires', '-')}"
 
 
 # ─── Invitation Codes ───
@@ -366,11 +508,20 @@ def get_ai_usage(user_id: str) -> int:
     return ai.get(month_key, 0)
 
 
+def is_ai_unlimited(user_id: str) -> bool:
+    """Return whether the user's plan has unlimited AI analysis."""
+    users = load_users()
+    u = users.get(user_id, {})
+    return u.get("plan", "free") in ("pro", "coach")
+
+
 def increment_ai_usage(user_id: str) -> int:
-    """Increment AI usage for current month. Returns new count."""
+    """Increment AI usage for current month. Pro/Coach are unlimited and do not consume quota."""
     users = load_users()
     if user_id not in users:
         return 0
+    if users[user_id].get("plan", "free") in ("pro", "coach"):
+        return get_ai_usage(user_id)
     ai = users[user_id].get("ai_usage", {})
     month_key = datetime.date.today().strftime("%Y-%m")
     ai[month_key] = ai.get(month_key, 0) + 1
@@ -379,8 +530,8 @@ def increment_ai_usage(user_id: str) -> int:
     return ai[month_key]
 
 
-def get_ai_limit(user_id: str) -> int:
-    """Get AI usage limit based on plan."""
+def get_ai_limit(user_id: str):
+    """Get AI usage limit based on plan. Pro/Coach are unlimited."""
     users = load_users()
     u = users.get(user_id, {})
     plan = u.get("plan", "free")
@@ -389,7 +540,7 @@ def get_ai_limit(user_id: str) -> int:
     elif plan == "core":
         return 30
     else:
-        return 999  # pro/coach: unlimited
+        return None  # pro/coach: unlimited
 
 
 def get_user_dir(user_id: str) -> Path:
