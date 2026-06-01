@@ -111,6 +111,7 @@ from ui_components import (
     render_upgrade_note,
     render_upload_cta_note,
     render_upload_intro,
+    render_upload_next_steps,
     select_ride_scope as select_ride_scope_widget,
 )
 from pages.static_pages import (
@@ -2846,15 +2847,7 @@ elif page == "📤 上传分析":
 
         render_upload_quick_diagnosis(merged_rides, load_profile())
 
-        st.markdown(f"""
-<div class="upload-next">
-    <div class="title">下一步建议</div>
-    <div class="text">
-        这 {len(new_rides)} 条新解析数据已经并入历史。建议先看 <b>📊 功率仪表盘</b> 理解当前能力结构,
-        再进入 <b>🧠 AI 功率分析</b> 获取训练判断;如果你已解锁 Core,可继续生成 <b>📋 训练课表</b>。
-    </div>
-</div>
-""", unsafe_allow_html=True)
+        render_upload_next_steps(len(new_rides))
     else:
         st.warning("未找到有效骑行数据。请确认文件为 .fit 格式,并包含骑行记录;如果没有功率数据,部分分析会受限。")
 

@@ -357,6 +357,18 @@ def render_upload_cta_note():
 """, unsafe_allow_html=True)
 
 
+def render_upload_next_steps(new_ride_count: int):
+    st.markdown(f"""
+<div class="upload-next">
+    <div class="title">下一步建议</div>
+    <div class="text">
+        这 {new_ride_count} 条新解析数据已经并入历史。建议先看 <b>📊 功率仪表盘</b> 理解当前能力结构,
+        再进入 <b>🧠 AI 功率分析</b> 获取训练判断;如果你已解锁 Core,可继续生成 <b>📋 训练课表</b>。
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+
 
 def render_profile_intro():
     st.markdown("""
