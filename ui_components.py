@@ -889,6 +889,18 @@ def render_nutrition_quick_reference():
 
 
 
+def render_nutrition_supplement_guidance(environment, fueling_set, workout_type):
+    if environment in ["天气太热", "室内骑行"] and "胃不舒服" in fueling_set:
+        st.info("高温+胃不适:优先碳水软糖做碳水主力,搭配电解质胶少量多次补盐。赛前 30min 不要吃太多胶。")
+    elif environment in ["天气太热", "室内骑行"]:
+        st.info("高温环境:推荐以电解质胶为主,碳水软糖作为口味调剂。不要只靠碳水密度高的产品而忽略钠。")
+    elif "胃不舒服" in fueling_set:
+        st.info("胃不适记录:优先碳水软糖→果胶基质更温和;能量胶分小口摄入,不要一次吃完一根。")
+    elif workout_type == "比赛/绕圈赛":
+        st.info("比赛日:赛前可用咖啡胶,赛中主力用电解质胶。不要用训练中没测试过的产品。")
+
+
+
 def render_nutrition_feedback_adjustments(fueling_set, special_set, weight, ftp, feedback_count):
     st.subheader("根据最近反馈的修正")
     if fueling_set or special_set:

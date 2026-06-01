@@ -110,6 +110,7 @@ from ui_components import (
     render_nutrition_feedback_adjustments,
     render_nutrition_intro,
     render_nutrition_quick_reference,
+    render_nutrition_supplement_guidance,
     render_nutrition_target,
     render_nutrition_timing_guidance,
     render_plan_builder_intro,
@@ -5042,14 +5043,7 @@ elif page == "🍝 营养与补给":
 <div style="color:var(--tc-subtle); font-size:0.74em; margin-top:0.5em; border-top:1px solid var(--tc-surface-2); padding-top:0.4em;">约需 <b>{servings_needed}</b> 份/小时</div>
 </div>""", unsafe_allow_html=True)
 
-        if environment in ["天气太热", "室内骑行"] and "胃不舒服" in fueling_set:
-            st.info("高温+胃不适:优先碳水软糖做碳水主力,搭配电解质胶少量多次补盐。赛前 30min 不要吃太多胶。")
-        elif environment in ["天气太热", "室内骑行"]:
-            st.info("高温环境:推荐以电解质胶为主,碳水软糖作为口味调剂。不要只靠碳水密度高的产品而忽略钠。")
-        elif "胃不舒服" in fueling_set:
-            st.info("胃不适记录:优先碳水软糖→果胶基质更温和;能量胶分小口摄入,不要一次吃完一根。")
-        elif workout_type == "比赛/绕圈赛":
-            st.info("比赛日:赛前可用咖啡胶,赛中主力用电解质胶。不要用训练中没测试过的产品。")
+        render_nutrition_supplement_guidance(environment, fueling_set, workout_type)
     else:
         st.caption("补剂产品库未加载,请确认 supplement_db.json 存在。")
 
