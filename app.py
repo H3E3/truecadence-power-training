@@ -114,6 +114,7 @@ from ui_components import (
     render_nutrition_timing_guidance,
     render_plan_builder_intro,
     render_plan_builder_styles,
+    render_plan_source_scope,
     render_plan_summary_cards,
     render_power_dashboard_top_metrics,
     render_power_ftp_reference,
@@ -4022,13 +4023,7 @@ elif page == "🧠 AI 功率分析":
 elif page == "📋 训练课表":
     require_plan(1, "📋 训练课表")
 
-    with st.expander("⚙️ 数据来源设置", expanded=False):
-        uploaded_rides, historical, use_all, rides, source_label = select_ride_scope(
-            "合并全历史数据",
-            key="plan_use_all",
-            help_text="通常不用改。打开后会把历史存档和本次上传一起用于估算 FTP / 功率区间。",
-        )
-        st.caption(f"本次上传 {len(uploaded_rides)} 条|历史存档 {len(historical)} 条|合并后 {len(merge_rides(historical, uploaded_rides))} 条")
+    uploaded_rides, historical, use_all, rides, source_label = render_plan_source_scope(select_ride_scope, merge_rides)
     rides.sort(key=lambda x: x['date'])
     rides = enrich_rides(rides)
     if not rides:
