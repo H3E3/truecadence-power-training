@@ -355,3 +355,83 @@ def render_upload_cta_note():
     <b>👇 从这里开始:</b>点击下方按钮选择 FIT 文件,或直接把 FIT 文件拖到上传框里。一次最多 28 个,单次总大小最多 50MB;网络不稳定或使用代理时,建议每批 5-10 个 FIT,更稳。
 </div>
 """, unsafe_allow_html=True)
+
+
+
+def render_profile_intro():
+    st.markdown("""
+<style>
+.profile-priority-note {
+    position: relative;
+    background: linear-gradient(135deg, rgba(255,107,53,0.20), rgba(22,27,34,0.96));
+    border: 1px solid rgba(255,107,53,0.42);
+    border-radius: 16px;
+    padding: 1.05em 1.15em;
+    margin: 0.75em 0 1.05em;
+    color: #f0f6fc;
+    box-shadow: 0 0 22px rgba(255,107,53,0.10), inset 0 0 18px rgba(255,107,53,0.035);
+}
+.profile-priority-note .tag {
+    color:#ff9a68;
+    font-size:0.76em;
+    font-weight:800;
+    letter-spacing:0.10em;
+    margin-bottom:0.35em;
+}
+.profile-priority-note .main {
+    font-size:1.02em;
+    font-weight:760;
+    line-height:1.65;
+}
+.profile-priority-note .main b {
+    color:#ffb088;
+    text-shadow:0 0 8px rgba(255,107,53,0.42);
+}
+.profile-note {
+    background: linear-gradient(135deg, rgba(255,107,53,0.10), rgba(22,27,34,0.92));
+    border: 1px solid rgba(255,107,53,0.22);
+    border-radius: 14px;
+    padding: 0.95em 1em;
+    margin: 0.7em 0 1em;
+    color: #aab6c3;
+    font-size: 0.9em;
+    line-height: 1.65;
+}
+.profile-section-title {
+    color: #f0f6fc;
+    font-size: 1.02em;
+    font-weight: 720;
+    margin: 0.9em 0 0.45em;
+}
+.profile-help {
+    color: var(--tc-subtle);
+    font-size: 0.84em;
+    line-height: 1.55;
+    margin-bottom: 0.45em;
+}
+.danger-note {
+    color: var(--tc-subtle);
+    font-size: 0.82em;
+    margin-top: 0.6em;
+}
+</style>
+<div class="profile-priority-note">
+    <div class="tag">PROFILE SETUP · 先填这几项</div>
+    <div class="main">这些信息会直接影响 <b>FTP、功体比、训练区间、营养建议和 AI 分析</b>。建议优先填写:<b>体重、实测 FTP、最大心率、训练目标</b>。</div>
+</div>
+<div class="profile-note">
+    <b>为什么要填:</b>体重决定 W/kg 和营养建议;FTP 决定功率区间、AI 分析和训练课表;心率用于判断强度反应和恢复压力;训练目标会影响后续建议方向。
+</div>
+""", unsafe_allow_html=True)
+
+
+def render_profile_section_title(title: str):
+    st.markdown(f'<div class="profile-section-title">{title}</div>', unsafe_allow_html=True)
+
+
+def render_profile_help(text: str):
+    st.markdown(f'<div class="profile-help">{text}</div>', unsafe_allow_html=True)
+
+
+def render_danger_note(text: str):
+    st.markdown(f'<div class="danger-note">{text}</div>', unsafe_allow_html=True)

@@ -95,7 +95,11 @@ from ui_components import (
     render_empty_data_state,
     render_icp_footer as render_icp_footer_widget,
     render_mini_metric_card,
+    render_danger_note,
     render_pricing_intro,
+    render_profile_help,
+    render_profile_intro,
+    render_profile_section_title,
     render_upgrade_note,
     render_upload_cta_note,
     render_upload_intro,
@@ -3194,70 +3198,7 @@ elif page == "🔗 数据导入":
 elif page == "👤 骑手档案":
     st.title("👤 骑手档案")
 
-    st.markdown("""
-<style>
-.profile-priority-note {
-    position: relative;
-    background: linear-gradient(135deg, rgba(255,107,53,0.20), rgba(22,27,34,0.96));
-    border: 1px solid rgba(255,107,53,0.42);
-    border-radius: 16px;
-    padding: 1.05em 1.15em;
-    margin: 0.75em 0 1.05em;
-    color: #f0f6fc;
-    box-shadow: 0 0 22px rgba(255,107,53,0.10), inset 0 0 18px rgba(255,107,53,0.035);
-}
-.profile-priority-note .tag {
-    color:#ff9a68;
-    font-size:0.76em;
-    font-weight:800;
-    letter-spacing:0.10em;
-    margin-bottom:0.35em;
-}
-.profile-priority-note .main {
-    font-size:1.02em;
-    font-weight:760;
-    line-height:1.65;
-}
-.profile-priority-note .main b {
-    color:#ffb088;
-    text-shadow:0 0 8px rgba(255,107,53,0.42);
-}
-.profile-note {
-    background: linear-gradient(135deg, rgba(255,107,53,0.10), rgba(22,27,34,0.92));
-    border: 1px solid rgba(255,107,53,0.22);
-    border-radius: 14px;
-    padding: 0.95em 1em;
-    margin: 0.7em 0 1em;
-    color: #aab6c3;
-    font-size: 0.9em;
-    line-height: 1.65;
-}
-.profile-section-title {
-    color: #f0f6fc;
-    font-size: 1.02em;
-    font-weight: 720;
-    margin: 0.9em 0 0.45em;
-}
-.profile-help {
-    color: var(--tc-subtle);
-    font-size: 0.84em;
-    line-height: 1.55;
-    margin-bottom: 0.45em;
-}
-.danger-note {
-    color: var(--tc-subtle);
-    font-size: 0.82em;
-    margin-top: 0.6em;
-}
-</style>
-<div class="profile-priority-note">
-    <div class="tag">PROFILE SETUP · 先填这几项</div>
-    <div class="main">这些信息会直接影响 <b>FTP、功体比、训练区间、营养建议和 AI 分析</b>。建议优先填写:<b>体重、实测 FTP、最大心率、训练目标</b>。</div>
-</div>
-<div class="profile-note">
-    <b>为什么要填:</b>体重决定 W/kg 和营养建议;FTP 决定功率区间、AI 分析和训练课表;心率用于判断强度反应和恢复压力;训练目标会影响后续建议方向。
-</div>
-""", unsafe_allow_html=True)
+    render_profile_intro()
 
     profile = load_profile()
 
@@ -3272,7 +3213,7 @@ elif page == "👤 骑手档案":
         except Exception:
             history_count = 0
 
-        st.markdown('<div class="profile-section-title">当前骑手</div>', unsafe_allow_html=True)
+        render_profile_section_title("当前骑手")
         c0a, c0b, c0c = st.columns(3)
         c0a.metric("当前骑手", active_rider)
         c0b.metric("骑手数量", f"{len(riders)}/{plan_info['riders']}")
@@ -3287,7 +3228,7 @@ elif page == "👤 骑手档案":
         else:
             st.info("当前只有一个骑手档案。Coach 版可管理多个骑手。")
 
-        st.markdown('<div class="profile-section-title">添加骑手</div>', unsafe_allow_html=True)
+        render_profile_section_title("添加骑手")
         add_col, add_btn_col = st.columns([2, 1], vertical_alignment="bottom")
         new_name = add_col.text_input("新骑手名称", placeholder="例如:客户007 / 张三 / 默认骑手2", key="profile_new_rider_name")
         if add_btn_col.button("添加骑手", key="profile_add_rider_btn", use_container_width=True):
@@ -3304,7 +3245,7 @@ elif page == "👤 骑手档案":
                 st.error("请输入骑手名称")
 
         if len(riders) > 1:
-            st.markdown('<div class="profile-section-title">删除骑手</div>', unsafe_allow_html=True)
+            render_profile_section_title("删除骑手")
             st.caption("只能删除非当前骑手。删除前请确认该骑手的数据不再需要。")
             del_options = [r for r in riders if r != active_rider]
             del_col, del_btn_col = st.columns([2, 1], vertical_alignment="bottom")
@@ -3325,8 +3266,8 @@ elif page == "👤 骑手档案":
                     st.error("请选择要删除的骑手")
 
     with tab1:
-        st.markdown('<div class="profile-section-title">身体数据</div>', unsafe_allow_html=True)
-        st.markdown('<div class="profile-help">用于计算功体比、营养需求和训练负荷解释。</div>', unsafe_allow_html=True)
+        render_profile_section_title("身体数据")
+        render_profile_help("用于计算功体比、营养需求和训练负荷解释。")
         c1, c2 = st.columns(2)
         name = c1.text_input("姓名", value=profile.get('name') or '', help="可填客户姓名或编号")
         gender = c2.selectbox("性别", ["男", "女"], index=0 if profile.get('gender', '男') == '男' else 1)
@@ -3341,8 +3282,8 @@ elif page == "👤 骑手档案":
         period_days = int(profile.get('period_days') or 5)
         cycle_sensitivity = profile.get('cycle_sensitivity') or '正常'
         if gender == '女':
-            st.markdown('<div class="profile-section-title">女性周期辅助</div>', unsafe_allow_html=True)
-            st.markdown('<div class="profile-help">可选填写。只用于训练恢复和补给建议,不作为医学判断。</div>', unsafe_allow_html=True)
+            render_profile_section_title("女性周期辅助")
+            render_profile_help("可选填写。只用于训练恢复和补给建议,不作为医学判断。")
             cycle_enabled = st.toggle("启用女性周期辅助", value=cycle_enabled, key="profile_cycle_enabled")
             if cycle_enabled:
                 cc1, cc2 = st.columns(2)
@@ -3356,8 +3297,8 @@ elif page == "👤 骑手档案":
                 period_days = cc1.number_input("平均经期天数", 2, 10, value=period_days, key="profile_period_days")
                 cycle_sensitivity = cc2.selectbox("经期训练敏感度", ["保守", "正常", "激进"], index=["保守", "正常", "激进"].index(cycle_sensitivity) if cycle_sensitivity in ["保守", "正常", "激进"] else 1, key="profile_cycle_sensitivity")
 
-        st.markdown('<div class="profile-section-title">训练数据</div>', unsafe_allow_html=True)
-        st.markdown('<div class="profile-help">FTP 和心率数据会直接影响功率区间、AI 诊断和课表生成。</div>', unsafe_allow_html=True)
+        render_profile_section_title("训练数据")
+        render_profile_help("FTP 和心率数据会直接影响功率区间、AI 诊断和课表生成。")
         c3, c4 = st.columns(2)
         ftp_test = c3.number_input("实测 FTP W", 0, 600, value=profile.get('ftp_test') if profile.get('ftp_test') else 0, key="ftp_input", help="如果不填,系统会根据 FIT 数据自动估算")
         max_hr = c4.number_input("最大心率", 0, 250, value=profile.get('max_hr') if profile.get('max_hr') else 0)
@@ -3368,14 +3309,14 @@ elif page == "👤 骑手档案":
 
         zone_rows = hr_zones_by_lthr(lthr) if hr_zone_method == "按乳酸阈值心率 LTHR" and lthr else hr_zones_by_max(max_hr)
         if zone_rows:
-            st.markdown('<div class="profile-section-title">心率区间预览</div>', unsafe_allow_html=True)
+            render_profile_section_title("心率区间预览")
             st.dataframe(pd.DataFrame(zone_rows), use_container_width=True, hide_index=True)
             st.caption("心率区间用于训练强度解释,不作为医学判断;高温、疲劳、咖啡因、睡眠和补给都会影响心率反应。")
         else:
             st.info("填写最大心率或乳酸阈值心率后,会在这里显示心率区间。")
 
-        st.markdown('<div class="profile-section-title">目标信息</div>', unsafe_allow_html=True)
-        st.markdown('<div class="profile-help">训练目标越清楚,AI 建议和课表方向越容易对准。</div>', unsafe_allow_html=True)
+        render_profile_section_title("目标信息")
+        render_profile_help("训练目标越清楚,AI 建议和课表方向越容易对准。")
         goal = st.text_input("训练目标", value=profile.get('goal') or '', placeholder="例如:提升 FTP、备战绕圈赛、减脂、恢复体能")
         notes = st.text_area("备注", value=profile.get('notes') or '', placeholder="可记录伤病、可训练时间、比赛日期、器材情况等")
 
@@ -3413,11 +3354,11 @@ elif page == "👤 骑手档案":
                 save_rider_profile(user["user_id"], rider, existing)
             st.cache_data.clear()
             st.rerun()
-        st.markdown('<div class="danger-note">清空只影响当前骑手档案,不会删除 FIT 骑行记录。</div>', unsafe_allow_html=True)
+        render_danger_note("清空只影响当前骑手档案,不会删除 FIT 骑行记录。")
 
     with tab2:
-        st.markdown('<div class="profile-section-title">Fitting 设定记录</div>', unsafe_allow_html=True)
-        st.markdown('<div class="profile-help">用于记录人车设定,后续可辅助判断姿势变化、舒适性和输出表现。这里不是医学诊断,只是长期跟踪档案。</div>', unsafe_allow_html=True)
+        render_profile_section_title("Fitting 设定记录")
+        render_profile_help("用于记录人车设定,后续可辅助判断姿势变化、舒适性和输出表现。这里不是医学诊断,只是长期跟踪档案。")
         c5, c6 = st.columns(2)
         saddle_h = c5.number_input("座垫高度 mm", 0, 900, value=profile.get('saddle_height') if profile.get('saddle_height') else 0)
         reach = c5.number_input("座垫-车把 mm", 0, 700, value=profile.get('reach') if profile.get('reach') else 0)
@@ -3457,7 +3398,7 @@ elif page == "👤 骑手档案":
                 save_rider_profile(user["user_id"], rider, existing)
             st.cache_data.clear()
             st.rerun()
-        st.markdown('<div class="danger-note">清空只影响当前骑手的 Fitting 设定,不会删除基础档案和骑行记录。</div>', unsafe_allow_html=True)
+        render_danger_note("清空只影响当前骑手的 Fitting 设定,不会删除基础档案和骑行记录。")
 
 elif page == "📊 功率仪表盘":
     st.title("📊 功率仪表盘")
