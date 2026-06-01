@@ -115,6 +115,7 @@ from ui_components import (
     render_plan_builder_styles,
     render_plan_summary_cards,
     render_power_dashboard_top_metrics,
+    render_power_ftp_reference,
     render_recovery_advice_summary,
     render_recovery_intro,
     render_danger_note,
@@ -3409,35 +3410,7 @@ elif page == "📊 功率仪表盘":
         "manual_ftp" if actual_ftp > 0 else "estimated_ftp",
     )
 
-    # Show FTP source. Training calculations always prefer manually tested FTP when available.
-    if actual_ftp > 0:
-        st.success(f"当前使用 FTP: **{actual_ftp}W**(来源:用户实测)· 功体比: **{round(actual_ftp/pweight, 1)} W/kg**")
-        st.caption(f"自动估算 FTP:{est_ftp}W,仅作参考;依据:{ftp_detail.get('basis', '-')};可信度:{ftp_detail.get('confidence', '-') }。训练区间、AI 分析和课表优先使用实测 FTP。")
-    else:
-        st.info(f"当前使用自动估算 FTP: **{est_ftp}W** · 功体比: **{round(est_ftp/pweight, 1)} W/kg**")
-        st.caption(f"估算依据:{ftp_detail.get('basis', '-')};可信度:{ftp_detail.get('confidence', '-') }。如有正式 FTP 测试,请在骑手档案页填写实测 FTP。")
-
-    if actual_ftp > 0 and est_ftp > 0 and abs(actual_ftp - est_ftp) / actual_ftp > 0.12:
-        st.warning(f"自动估算 ({est_ftp}W) 与实测 FTP ({actual_ftp}W) 差异较大。当前训练建议以实测 FTP 为准;自动值仅说明已上传数据里的可见证据。")
-    elif actual_ftp > 0 and best.get('20min', 0) >= actual_ftp * 0.98:
-        st.info(f"已上传数据中存在接近/达到当前 FTP 的 20min 记录(20min {best.get('20min', 0)}W),当前实测 FTP 可信度较高。")
-
-    window_rows = ftp_detail.get('window_rows') or []
-    with st.expander("FTP 多窗口参考:20 / 40 / 60 分钟", expanded=False):
-        st.caption("自动估算不会只看一个 20min 窗口。普通骑行中的 20min best 容易混入无氧贡献,默认按 ×0.85-0.90 理解;40min 按约 ×0.95;60min 本身接近 FTP 概念,通常不再额外打折。训练区间仍优先使用你在骑手档案填写的实测 FTP。")
-        if window_rows:
-            st.dataframe(pd.DataFrame(window_rows), use_container_width=True, hide_index=True)
-        else:
-            st.info("当前数据还没有足够的 20/40/60min 有效功率窗口。建议上传最近 4-12 周、包含较长稳定输出的 FIT 后再看。")
-        p20_ref = ftp_detail.get('best_20') or best.get('20min', 0)
-        p40_ref = ftp_detail.get('best_40') or best.get('40min', 0)
-        p60_ref = ftp_detail.get('best_60') or best.get('60min', 0)
-        if p20_ref and (p40_ref or p60_ref):
-            long_ref = max([x for x in [p40_ref, p60_ref] if x])
-            if p20_ref > long_ref * 1.12:
-                st.warning("20min 明显高于 40/60min 参考,自动 FTP 可能偏乐观;建议结合实测 FTP 或更长时间测试。")
-            elif p60_ref and p60_ref >= ftp * 0.90:
-                st.success("已有较好的 60min 支撑记录,FTP 估算可信度相对更高。")
+    render_power_ftp_reference(actual_ftp, est_ftp, ftp, pweight, ftp_detail, best)
 
     # Top metrics - uniform cards
     render_power_dashboard_top_metrics(ftp, pweight, best, len(rides))
