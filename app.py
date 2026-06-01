@@ -101,6 +101,8 @@ from ui_components import (
     render_nutrition_intro,
     render_nutrition_target,
     render_power_dashboard_top_metrics,
+    render_recovery_advice_summary,
+    render_recovery_intro,
     render_danger_note,
     render_pricing_intro,
     render_profile_help,
@@ -4774,37 +4776,7 @@ elif page == "🛌 恢复与睡眠":
     st.title("🛌 恢复与睡眠")
     st.caption("把训练负荷和主观反馈合在一起,判断今天该正常训练、降强度、恢复骑,还是完全休息。")
 
-    st.markdown("""
-<style>
-.recovery-hero {
-    padding: 1.15em 1.1em;
-    border-radius: 15px;
-    background: linear-gradient(135deg, rgba(255,107,53,0.12), rgba(22,27,34,0.94));
-    border: 1px solid rgba(255,107,53,0.24);
-    margin: 0.8em 0 1em;
-}
-.recovery-title { color:#f0f6fc; font-size:1.15em; font-weight:760; margin-bottom:0.35em; }
-.recovery-text { color:#aab6c3; font-size:0.9em; line-height:1.65; }
-.recovery-grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:0.75em; margin:0.9em 0 1.1em; }
-.recovery-card { background:var(--tc-surface); border:1px solid var(--tc-surface-2); border-radius:13px; padding:0.85em; }
-.recovery-card .k { color:var(--tc-subtle); font-size:0.76em; margin-bottom:0.25em; }
-.recovery-card .v { color:#f0f6fc; font-size:1.18em; font-weight:760; }
-.recovery-card .d { color:var(--tc-subtle); font-size:0.78em; margin-top:0.25em; line-height:1.4; }
-.recovery-advice { border-radius:16px; padding:1.05em 1.1em; margin:1em 0; border:1px solid; }
-.recovery-advice .tag { font-size:0.78em; font-weight:760; letter-spacing:0.08em; margin-bottom:0.4em; }
-.recovery-advice .main { font-size:1.45em; font-weight:800; color:#f0f6fc; margin-bottom:0.35em; }
-.recovery-advice .why { color:var(--tc-muted); line-height:1.65; font-size:0.92em; }
-.recovery-red { background:linear-gradient(135deg, rgba(248,81,73,0.16), rgba(22,27,34,0.95)); border-color:rgba(248,81,73,0.36); }
-.recovery-yellow { background:linear-gradient(135deg, rgba(240,192,64,0.14), rgba(22,27,34,0.95)); border-color:rgba(240,192,64,0.34); }
-.recovery-green { background:linear-gradient(135deg, rgba(35,134,54,0.14), rgba(22,27,34,0.95)); border-color:rgba(35,134,54,0.34); }
-.recovery-blue { background:linear-gradient(135deg, rgba(88,166,255,0.14), rgba(22,27,34,0.95)); border-color:rgba(88,166,255,0.34); }
-@media (max-width: 900px) { .recovery-grid { grid-template-columns: 1fr; } }
-</style>
-<div class="recovery-hero">
-    <div class="recovery-title">今天不是问"能不能练",而是问"练多重才值得"</div>
-    <div class="recovery-text">系统会综合 TSB/训练负荷、最近训练反馈、睡眠、腿疲劳、RPE、感冒发烧和疼痛记录,给出当天训练建议。</div>
-</div>
-""", unsafe_allow_html=True)
+    render_recovery_intro()
 
     uploaded_rides, historical, use_all, rides, source_label = select_ride_scope(
         "合并全历史数据",
@@ -4981,20 +4953,23 @@ elif page == "🛌 恢复与睡眠":
     if not reasons:
         reasons = ["训练负荷和今天记录没有明显红旗"]
 
-    st.markdown(f"""
-<div class="recovery-advice {advice_class}">
-    <div class="tag">{advice_tag}</div>
-    <div class="main">{advice_main}</div>
-    <div class="why"><b>主要依据:</b>{';'.join(reasons[:6])}</div>
-</div>
-<div class="recovery-grid">
-    <div class="recovery-card"><div class="k">TSB 状态</div><div class="v">{tsb}</div><div class="d">CTL {ctl} / ATL {atl}</div></div>
-    <div class="recovery-card"><div class="k">近两周周均</div><div class="v">{weekly_h}h</div><div class="d">来自 FIT 训练记录</div></div>
-    <div class="recovery-card"><div class="k">训练反馈</div><div class="v">{feedback_summary.get('count', 0)} 条</div><div class="d">最近主观状态</div></div>
-    <div class="recovery-card"><div class="k">手表睡眠</div><div class="v">{watch_sleep_hours or '-'}h</div><div class="d">评分 {watch_sleep_score or '-'} / HRV {watch_hrv or '-'}</div></div>
-    <div class="recovery-card"><div class="k">午睡修正</div><div class="v">{str(avg_nap_min) + 'min' if avg_nap_min else '-'}</div><div class="d">更清醒 {nap_refresh_count} 次 / 更困 {nap_sluggish_count} 次</div></div>
-</div>
-""", unsafe_allow_html=True)
+    render_recovery_advice_summary(
+        advice_class,
+        advice_tag,
+        advice_main,
+        reasons,
+        tsb,
+        ctl,
+        atl,
+        weekly_h,
+        feedback_summary.get('count', 0),
+        watch_sleep_hours,
+        watch_sleep_score,
+        watch_hrv,
+        avg_nap_min,
+        nap_refresh_count,
+        nap_sluggish_count,
+    )
 
     c1, c2 = st.columns([1.1, 1])
     if stale_notes:
