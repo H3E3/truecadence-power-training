@@ -909,6 +909,46 @@ def render_nutrition_feedback_adjustments(fueling_set, special_set, weight, ftp,
 
 
 
+def render_recovery_action_and_feedback(next_action, stale_notes, ftp, nap_records, feedback_summary, pain_counts, special_counts, cycle_counts, has_feedback):
+    c1, c2 = st.columns([1.1, 1])
+    if stale_notes:
+        st.info(";".join(stale_notes))
+
+    with c1:
+        st.subheader("今天怎么做")
+        for item in next_action:
+            st.markdown(f"- {item}")
+        if ftp:
+            z1 = round(ftp * 0.55)
+            z2_hi = round(ftp * 0.75)
+            st.info(f"恢复/有氧参考:Z1 < **{z1}W**;Z2 约 **{z1}-{z2_hi}W**。")
+        if nap_records:
+            st.caption("午睡说明:午睡只作为当日训练准备度修正,不直接等同于夜间睡眠。15-45 分钟且醒后更清醒,通常对下午训练有帮助;>90 分钟或醒后更困,则要注意睡眠惯性。")
+        st.subheader("恢复优先级")
+        st.markdown("""
+1. **睡眠**:目标 7.5-9 小时;睡眠差时训练收益会明显下降。
+2. **补水和碳水**:长距离/强度课后先补碳水,再补蛋白。
+3. **低强度活动**:疲劳高时,30-45 分钟 Z1 比硬上间歇更有价值。
+4. **疼痛处理**:重复疼痛优先查训练量、锁片/座垫/把位,不要只靠忍。
+""")
+    with c2:
+        st.subheader("最近反馈摘要")
+        for line in feedback_summary.get('lines', []):
+            st.markdown(f"- {line}")
+        if pain_counts:
+            pain_txt = "、".join(f"{k}×{v}" for k, v in sorted(pain_counts.items(), key=lambda kv: kv[1], reverse=True))
+            st.warning(f"不适记录:{pain_txt}")
+        if special_counts:
+            special_txt = "、".join(f"{k}×{v}" for k, v in sorted(special_counts.items(), key=lambda kv: kv[1], reverse=True))
+            st.warning(f"特殊情况:{special_txt}")
+        if cycle_counts:
+            cycle_txt = "、".join(f"{k}×{v}" for k, v in sorted(cycle_counts.items(), key=lambda kv: kv[1], reverse=True))
+            st.info(f"女性周期:{cycle_txt}")
+        if not has_feedback:
+            st.info("还没有训练反馈。去「📝 训练反馈」记录一次,恢复判断会更准。")
+
+
+
 def render_recovery_intro():
     st.markdown("""
 <style>
