@@ -94,6 +94,8 @@ from ui_components import (
     load_tc_logo_svg as load_tc_logo_svg_from_path,
     render_beta_feedback_intro,
     render_empty_data_state,
+    render_goal_styles,
+    render_goal_verdict_summary,
     render_icp_footer as render_icp_footer_widget,
     render_intervals_manual_import_note,
     render_intervals_oauth_import_note,
@@ -5346,23 +5348,7 @@ elif page == "🎯 目标追踪":
     st.title("🎯 目标追踪")
     st.caption("把目标拆成路径、阶段和本周动作:不是许愿,而是知道下一步怎么走。")
 
-    st.markdown("""
-<style>
-.goal-hero { padding:1.1em; border-radius:15px; margin:0.8em 0 1em; border:1px solid rgba(255,107,53,0.28); background:linear-gradient(135deg, rgba(255,107,53,0.14), rgba(22,27,34,0.94)); }
-.goal-tag { color:#ff9a68; font-size:0.76em; font-weight:780; letter-spacing:0.12em; margin-bottom:0.45em; }
-.goal-main { color:#f0f6fc; font-size:1.42em; font-weight:820; line-height:1.35; margin-bottom:0.25em; }
-.goal-why { color:var(--tc-muted); line-height:1.65; font-size:0.92em; }
-.goal-grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:0.75em; margin:0.9em 0 1.1em; }
-.goal-card { background:var(--tc-surface); border:1px solid var(--tc-surface-2); border-radius:13px; padding:0.85em; }
-.goal-card .k { color:var(--tc-subtle); font-size:0.76em; margin-bottom:0.25em; }
-.goal-card .v { color:#f0f6fc; font-size:1.16em; font-weight:780; }
-.goal-card .d { color:var(--tc-subtle); font-size:0.78em; margin-top:0.25em; line-height:1.4; }
-.goal-step { background:var(--tc-surface); border:1px solid var(--tc-border); border-radius:14px; padding:0.9em; margin:0.55em 0; }
-.goal-step .t { color:#f0f6fc; font-weight:780; margin-bottom:0.25em; }
-.goal-step .x { color:#aab6c3; font-size:0.9em; line-height:1.6; }
-@media (max-width: 900px) { .goal-grid { grid-template-columns: 1fr; } }
-</style>
-""", unsafe_allow_html=True)
+    render_goal_styles()
 
     uploaded_rides, historical, use_all, rides, source_label = select_ride_scope(
         "合并全历史数据",
@@ -5472,25 +5458,25 @@ elif page == "🎯 目标追踪":
         verdict = "目标偏激进,建议拆成两段"
         verdict_text = f"按当前投入估算约需 {needed_weeks} 周,而你设定的是 {target_weeks_n} 周。建议先设中间目标,再冲最终目标。"
 
-    st.markdown(f"""
-<div class="goal-hero">
-    <div class="goal-tag">GOAL VERDICT</div>
-    <div class="goal-main">{verdict}</div>
-    <div class="goal-why">{verdict_text}</div>
-</div>
-<div class="goal-grid">
-    <div class="goal-card"><div class="k">当前 FTP</div><div class="v">{ftp}W</div><div class="d">{current_wkg} W/kg</div></div>
-    <div class="goal-card"><div class="k">目标</div><div class="v">{target_ftp}W</div><div class="d">{target_wkg} W/kg|差 {ftp_gap:+}W</div></div>
-    <div class="goal-card"><div class="k">预计需要</div><div class="v">{needed_weeks}周</div><div class="d">设定周期 {target_weeks_n}周</div></div>
-    <div class="goal-card"><div class="k">训练承载</div><div class="v">{weekly_h}h/周</div><div class="d">{capacity}</div></div>
-</div>
-<div class="goal-grid">
-    <div class="goal-card"><div class="k">体能 CTL</div><div class="v">{ctl}</div><div class="d">长期训练积累</div></div>
-    <div class="goal-card"><div class="k">状态 TSB</div><div class="v">{tsb}</div><div class="d">当前新鲜度</div></div>
-    <div class="goal-card"><div class="k">反馈接入</div><div class="v">{len(recent_feedback)} 条</div><div class="d">睡眠 {avg_sleep or '-'} / 腿疲劳 {avg_fatigue or '-'}</div></div>
-    <div class="goal-card"><div class="k">目标日期</div><div class="v">{event_date}</div><div class="d">用于阶段倒推</div></div>
-</div>
-""", unsafe_allow_html=True)
+    render_goal_verdict_summary(
+        verdict,
+        verdict_text,
+        ftp,
+        current_wkg,
+        target_ftp,
+        target_wkg,
+        ftp_gap,
+        needed_weeks,
+        target_weeks_n,
+        weekly_h,
+        capacity,
+        ctl,
+        tsb,
+        len(recent_feedback),
+        avg_sleep,
+        avg_fatigue,
+        event_date,
+    )
 
     progress = min(max(ftp / target_ftp, 0), 1) if target_ftp else 0
     st.progress(progress, f"当前进度:{round(progress*100)}%|还差 {max(0, ftp_gap)}W / {max(0, wkg_gap)} W/kg")

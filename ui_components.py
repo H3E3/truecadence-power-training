@@ -790,3 +790,64 @@ def render_recovery_advice_summary(
     <div class="recovery-card"><div class="k">午睡修正</div><div class="v">{str(avg_nap_min) + 'min' if avg_nap_min else '-'}</div><div class="d">更清醒 {nap_refresh_count} 次 / 更困 {nap_sluggish_count} 次</div></div>
 </div>
 """, unsafe_allow_html=True)
+
+
+
+def render_goal_styles():
+    st.markdown("""
+<style>
+.goal-hero { padding:1.1em; border-radius:15px; margin:0.8em 0 1em; border:1px solid rgba(255,107,53,0.28); background:linear-gradient(135deg, rgba(255,107,53,0.14), rgba(22,27,34,0.94)); }
+.goal-tag { color:#ff9a68; font-size:0.76em; font-weight:780; letter-spacing:0.12em; margin-bottom:0.45em; }
+.goal-main { color:#f0f6fc; font-size:1.42em; font-weight:820; line-height:1.35; margin-bottom:0.25em; }
+.goal-why { color:var(--tc-muted); line-height:1.65; font-size:0.92em; }
+.goal-grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:0.75em; margin:0.9em 0 1.1em; }
+.goal-card { background:var(--tc-surface); border:1px solid var(--tc-surface-2); border-radius:13px; padding:0.85em; }
+.goal-card .k { color:var(--tc-subtle); font-size:0.76em; margin-bottom:0.25em; }
+.goal-card .v { color:#f0f6fc; font-size:1.16em; font-weight:780; }
+.goal-card .d { color:var(--tc-subtle); font-size:0.78em; margin-top:0.25em; line-height:1.4; }
+.goal-step { background:var(--tc-surface); border:1px solid var(--tc-border); border-radius:14px; padding:0.9em; margin:0.55em 0; }
+.goal-step .t { color:#f0f6fc; font-weight:780; margin-bottom:0.25em; }
+.goal-step .x { color:#aab6c3; font-size:0.9em; line-height:1.6; }
+@media (max-width: 900px) { .goal-grid { grid-template-columns: 1fr; } }
+</style>
+""", unsafe_allow_html=True)
+
+
+def render_goal_verdict_summary(
+    verdict,
+    verdict_text,
+    ftp,
+    current_wkg,
+    target_ftp,
+    target_wkg,
+    ftp_gap,
+    needed_weeks,
+    target_weeks_n,
+    weekly_h,
+    capacity,
+    ctl,
+    tsb,
+    recent_feedback_count,
+    avg_sleep,
+    avg_fatigue,
+    event_date,
+):
+    st.markdown(f"""
+<div class="goal-hero">
+    <div class="goal-tag">GOAL VERDICT</div>
+    <div class="goal-main">{verdict}</div>
+    <div class="goal-why">{verdict_text}</div>
+</div>
+<div class="goal-grid">
+    <div class="goal-card"><div class="k">当前 FTP</div><div class="v">{ftp}W</div><div class="d">{current_wkg} W/kg</div></div>
+    <div class="goal-card"><div class="k">目标</div><div class="v">{target_ftp}W</div><div class="d">{target_wkg} W/kg|差 {ftp_gap:+}W</div></div>
+    <div class="goal-card"><div class="k">预计需要</div><div class="v">{needed_weeks}周</div><div class="d">设定周期 {target_weeks_n}周</div></div>
+    <div class="goal-card"><div class="k">训练承载</div><div class="v">{weekly_h}h/周</div><div class="d">{capacity}</div></div>
+</div>
+<div class="goal-grid">
+    <div class="goal-card"><div class="k">体能 CTL</div><div class="v">{ctl}</div><div class="d">长期训练积累</div></div>
+    <div class="goal-card"><div class="k">状态 TSB</div><div class="v">{tsb}</div><div class="d">当前新鲜度</div></div>
+    <div class="goal-card"><div class="k">反馈接入</div><div class="v">{recent_feedback_count} 条</div><div class="d">睡眠 {avg_sleep or '-'} / 腿疲劳 {avg_fatigue or '-'}</div></div>
+    <div class="goal-card"><div class="k">目标日期</div><div class="v">{event_date}</div><div class="d">用于阶段倒推</div></div>
+</div>
+""", unsafe_allow_html=True)
