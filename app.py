@@ -92,6 +92,7 @@ _ui_components = importlib.reload(_ui_components)
 from ui_components import (
     data_scope_caption,
     load_tc_logo_svg as load_tc_logo_svg_from_path,
+    render_beta_feedback_intro,
     render_empty_data_state,
     render_icp_footer as render_icp_footer_widget,
     render_mini_metric_card,
@@ -2245,44 +2246,7 @@ elif page == "🐞 内测反馈":
     user = st.session_state.get("user", {})
     rider = st.session_state.get("rider", "默认骑手")
 
-    st.markdown("""
-<style>
-.feedback-hero {
-    padding: 1.08em 1.15em;
-    border-radius: 16px;
-    background: linear-gradient(135deg, rgba(255,107,53,0.16), rgba(22,27,34,0.96));
-    border: 1px solid rgba(255,107,53,0.30);
-    margin: 0.8em 0 1.05em;
-}
-.feedback-hero .k { color:#ff9a68; font-size:0.78em; font-weight:820; letter-spacing:0.10em; margin-bottom:0.35em; }
-.feedback-hero .t { color:#f0f6fc; font-size:1.18em; font-weight:780; margin-bottom:0.35em; }
-.feedback-hero .d { color:#aab6c3; font-size:0.90em; line-height:1.7; }
-.feedback-tip {
-    background: var(--tc-surface);
-    border: 1px solid var(--tc-border);
-    border-radius: 13px;
-    padding: 0.9em 1em;
-    color: var(--tc-subtle);
-    font-size: 0.88em;
-    line-height: 1.65;
-    margin-bottom: 1em;
-}
-</style>
-<div class="feedback-hero">
-  <div class="k">BETA FEEDBACK</div>
-  <div class="t">发现问题就直接丢到这里</div>
-  <div class="d">越具体越好:在哪个页面、点了什么、看到什么异常、你原本期待它怎么工作。反馈会保存到内测记录里,方便后续集中修复。</div>
-</div>
-<div class="feedback-tip">
-  <b>建议反馈格式:</b>页面 + 操作步骤 + 看到的问题 + 期望结果。比如:"训练负荷页,上传 5 个 FIT 后,切到合并历史,图表没有变化,希望能提示是否已合并。"
-</div>
-<div class="feedback-tip" style="border-color:rgba(255,107,53,0.28);background:rgba(255,107,53,0.07);">
-  <b>如果你只想快速反馈,回答这 3 个问题就够了:</b><br>
-  1. 你最喜欢 TrueCadence 的哪个功能?为什么?<br>
-  2. 你最不喜欢、最想吐槽的地方是什么?<br>
-  3. 如果以后付费,你觉得哪个功能最值得付费?多少钱能接受?
-</div>
-""", unsafe_allow_html=True)
+    render_beta_feedback_intro()
 
     with st.form("beta_feedback_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
