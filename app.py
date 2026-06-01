@@ -100,6 +100,8 @@ from ui_components import (
     render_profile_help,
     render_profile_intro,
     render_profile_section_title,
+    render_training_feedback_intro,
+    render_training_feedback_section,
     render_upgrade_note,
     render_upload_cta_note,
     render_upload_intro,
@@ -2651,31 +2653,14 @@ elif page == "📝 训练反馈":
     st.title("📝 训练反馈")
     st.caption("记录睡眠、疲劳、疼痛、不适和训练后感受。后续 AI 分析会结合这些主观信息,判断是否该降强度、恢复或调整课表。")
 
-    st.markdown("""
-<style>
-.feedback-note {
-    background: linear-gradient(135deg, rgba(255,107,53,0.10), rgba(22,27,34,0.92));
-    border: 1px solid rgba(255,107,53,0.22);
-    border-radius: 14px;
-    padding: 0.95em 1em;
-    margin: 0.7em 0 1em;
-    color: #aab6c3;
-    font-size: 0.9em;
-    line-height: 1.65;
-}
-.feedback-section { color: #f0f6fc; font-size: 1.02em; font-weight: 720; margin: 0.9em 0 0.45em; }
-</style>
-<div class="feedback-note">
-    <b>为什么要记录:</b>功率只能告诉你做了多少,反馈能告诉你身体承受得怎么样。感冒、睡眠差、腿沉、膝盖痛、补给不足,都会影响今天该不该继续上强度。
-</div>
-""", unsafe_allow_html=True)
+    render_training_feedback_intro()
 
     feedback = load_feedback()
     profile = load_profile()
     cycle_enabled_for_feedback = bool(profile.get('cycle_enabled')) or profile.get('gender') == '女'
 
     with st.form("feedback_form"):
-        st.markdown('<div class="feedback-section">今日状态</div>', unsafe_allow_html=True)
+        render_training_feedback_section("今日状态")
         c1, c2, c3 = st.columns(3)
         fb_date = c1.date_input("日期", value=datetime.date.today())
         sleep_quality = c2.slider("睡眠质量", 1, 5, 3, help="1=很差,5=很好")
@@ -2685,7 +2670,7 @@ elif page == "📝 训练反馈":
         stress = c5.slider("生活/工作压力", 1, 5, 3)
         morning_hr = c6.number_input("晨脉/静息心率", 0, 160, 0, help="可选")
 
-        st.markdown('<div class="feedback-section">训练后反馈</div>', unsafe_allow_html=True)
+        render_training_feedback_section("训练后反馈")
         c7, c8, c9 = st.columns(3)
         rpe = c7.slider("RPE 主观强度", 1, 10, 5, help="1=非常轻松,10=极限")
         completion = c8.selectbox("完成度", ["未训练", "轻松完成", "正常完成", "勉强完成", "没完成"])
@@ -2694,7 +2679,7 @@ elif page == "📝 训练反馈":
         breathing = c10.selectbox("呼吸/心肺感受", ["正常", "喘不上来", "胸闷", "心率异常偏高", "心率异常偏低"])
         fueling = c11.selectbox("补给情况", ["正常", "吃少了", "喝少了", "胃不舒服", "低血糖感", "不适用"])
 
-        st.markdown('<div class="feedback-section">不适与特殊情况</div>', unsafe_allow_html=True)
+        render_training_feedback_section("不适与特殊情况")
         pain_options = ["膝盖", "腰", "颈肩", "手麻", "坐垫压迫", "脚麻/脚痛", "髋/臀", "跟腱/小腿"]
         pains = st.multiselect("哪里不舒服", pain_options, default=[], placeholder="无不适可留空")
         special_options = ["感冒", "发烧", "睡眠不足", "饮酒", "出差/旅行", "天气太热", "天气太冷", "工作压力大"]
@@ -2705,7 +2690,7 @@ elif page == "📝 训练反馈":
         cycle_mood = '不记录'
         cycle_training_impact = '不记录'
         if cycle_enabled_for_feedback:
-            st.markdown('<div class="feedback-section">女性周期状态</div>', unsafe_allow_html=True)
+            render_training_feedback_section("女性周期状态")
             fc1, fc2, fc3 = st.columns(3)
             cycle_status = fc1.selectbox("今日周期状态", ["不记录", "经期第1-2天", "经期第3-5天", "经期后恢复期", "排卵期附近", "经前期/PMS", "周期正常,无明显影响"], key="fb_cycle_status")
             cycle_pain = fc2.selectbox("腹痛/腰酸", ["无", "轻", "中", "重"], key="fb_cycle_pain")

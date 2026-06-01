@@ -435,3 +435,34 @@ def render_profile_help(text: str):
 
 def render_danger_note(text: str):
     st.markdown(f'<div class="danger-note">{text}</div>', unsafe_allow_html=True)
+
+
+
+def render_training_feedback_intro():
+    st.markdown("""
+<style>
+.training-feedback-note {
+    background: linear-gradient(135deg, rgba(255,107,53,0.10), rgba(22,27,34,0.92));
+    border: 1px solid rgba(255,107,53,0.22);
+    border-radius: 14px;
+    padding: 0.95em 1em;
+    margin: 0.7em 0 1em;
+    color: #aab6c3;
+    font-size: 0.9em;
+    line-height: 1.65;
+}
+.training-feedback-section {
+    color: #f0f6fc;
+    font-size: 1.02em;
+    font-weight: 720;
+    margin: 0.9em 0 0.45em;
+}
+</style>
+<div class="training-feedback-note">
+    <b>为什么要记录:</b>功率只能告诉你做了多少,反馈能告诉你身体承受得怎么样。感冒、睡眠差、腿沉、膝盖痛、补给不足,都会影响今天该不该继续上强度。
+</div>
+""", unsafe_allow_html=True)
+
+
+def render_training_feedback_section(title: str):
+    st.markdown(f'<div class="training-feedback-section">{title}</div>', unsafe_allow_html=True)
