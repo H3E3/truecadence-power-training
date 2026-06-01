@@ -636,3 +636,23 @@ def render_training_load_summary(
     <div class="load-card"><div class="k">主观疲劳阈值</div><div class="v">{fatigue_caution} / {fatigue_red}</div><div class="d">黄色 / 红色提醒线</div></div>
 </div>
 """, unsafe_allow_html=True)
+
+
+
+def render_power_dashboard_top_metrics(ftp, pweight, best, ride_count):
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    wkg = round(ftp / pweight, 1) if ftp and pweight else 0
+    col1.metric("FTP", f"{ftp}W", f"{wkg} W/kg" if wkg else "")
+    s5_wkg = round(best.get('5s', 0) / pweight, 1) if best.get('5s') and pweight else ""
+    col2.metric("5s 冲刺", f"{best.get('5s', 0)}W", f"{s5_wkg} W/kg" if s5_wkg else "")
+    p20 = best.get('20min', 0)
+    col3.metric("20min 功率", f"{p20}W", f"{round(p20 / ftp * 100)}% FTP" if ftp and p20 else "")
+    p40 = best.get('40min', 0)
+    col4.metric("40min 功率", f"{p40}W", f"{round(p40 / ftp * 100)}% FTP" if ftp and p40 else "")
+    p60 = best.get('60min', 0)
+    col5.metric("60min 功率", f"{p60}W", f"{round(p60 / ftp * 100)}% FTP" if ftp and p60 else "")
+    col6.metric("总骑行次数", ride_count, f"{ride_count} 条记录")
+
+
+def render_vertical_spacer(height_px: int = 12):
+    st.markdown(f'<div style="height:{int(height_px)}px"></div>', unsafe_allow_html=True)

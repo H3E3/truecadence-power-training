@@ -98,6 +98,7 @@ from ui_components import (
     render_intervals_manual_import_note,
     render_intervals_oauth_import_note,
     render_mini_metric_card,
+    render_power_dashboard_top_metrics,
     render_danger_note,
     render_pricing_intro,
     render_profile_help,
@@ -112,6 +113,7 @@ from ui_components import (
     render_upload_cta_note,
     render_upload_intro,
     render_upload_next_steps,
+    render_vertical_spacer,
     select_ride_scope as select_ride_scope_widget,
 )
 from pages.static_pages import (
@@ -3420,18 +3422,7 @@ elif page == "📊 功率仪表盘":
                 st.success("已有较好的 60min 支撑记录,FTP 估算可信度相对更高。")
 
     # Top metrics - uniform cards
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
-    wkg = round(ftp/pweight, 1)
-    col1.metric("FTP", f"{ftp}W", f"{wkg} W/kg")
-    s5_wkg = round(best['5s']/pweight, 1) if best['5s'] and pweight else ""
-    col2.metric("5s 冲刺", f"{best['5s']}W", f"{s5_wkg} W/kg" if s5_wkg else "")
-    p20 = best.get('20min', 0)
-    col3.metric("20min 功率", f"{p20}W", f"{round(p20/ftp*100)}% FTP" if ftp and p20 else "")
-    p40 = best.get('40min', 0)
-    col4.metric("40min 功率", f"{p40}W", f"{round(p40/ftp*100)}% FTP" if ftp and p40 else "")
-    p60 = best.get('60min', 0)
-    col5.metric("60min 功率", f"{p60}W", f"{round(p60/ftp*100)}% FTP" if ftp and p60 else "")
-    col6.metric("总骑行次数", len(rides), f"{len(rides)} 条记录")
+    render_power_dashboard_top_metrics(ftp, pweight, best, len(rides))
 
     # Power curve
     st.subheader("功率持续时间曲线")
@@ -3538,6 +3529,7 @@ elif page == "📊 功率仪表盘":
                 render_mini_metric_card("最佳单次评级", b.get('rating', '-'), f"{b.get('score', 0)} 分")
             with c4:
                 render_mini_metric_card("后程可分析骑行", f"{durability_summary['count']} 条", f"总记录 {len(rides)} 条")
+            render_vertical_spacer(14)
             dur_rows = []
             for x in durability_summary['items'][:8]:
                 dur_rows.append({
