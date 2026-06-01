@@ -936,3 +936,33 @@ def render_ai_cached_notice(cached_at, unlimited_ai):
     <div class="ai-panel-text">下方结果来自当前数据范围{cache_note}。切换页面回来不会重复扣次数;{'Pro / Coach 点击重新分析也不扣次数。' if unlimited_ai else '只有点击重新分析才会重新生成并消耗 1 次额度。'}</div>
 </div>
 """, unsafe_allow_html=True)
+
+
+
+def render_plan_builder_styles():
+    st.markdown("""
+<style>
+.plan-hero{padding:1.1em 1.15em;border-radius:16px;background:linear-gradient(135deg,rgba(255,107,53,.16),rgba(22,27,34,.96));border:1px solid rgba(255,107,53,.28);margin:.6em 0 1em}.plan-kicker{color:#ff9a68;font-size:.78em;font-weight:800;letter-spacing:.08em}.plan-title{color:#f0f6fc;font-size:1.45em;font-weight:850;margin:.25em 0}.plan-sub{color:#aab6c3;font-size:.9em;line-height:1.6}.plan-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7em;margin:.8em 0 1em}.plan-card{background:var(--tc-surface);border:1px solid var(--tc-border);border-radius:13px;padding:.85em;min-height:5.6em}.plan-card .k{color:var(--tc-subtle);font-size:.72em}.plan-card .v{color:#f0f6fc;font-size:1.08em;font-weight:800;margin:.18em 0}.plan-card .d{color:var(--tc-subtle);font-size:.75em;line-height:1.35}.plan-day{background:var(--tc-surface);border:1px solid var(--tc-border);border-radius:10px;padding:.68em .66em;min-height:12em;margin:.15em 0}.plan-day .dow{color:var(--tc-subtle);font-size:.68em;font-weight:800}.plan-day .name{color:#f0f6fc;font-size:.82em;font-weight:800;margin-top:.28em;line-height:1.25}.plan-day .detail{color:var(--tc-subtle);font-size:.68em;margin-top:.35em;line-height:1.35;min-height:2.4em}.plan-pill{display:inline-block;background:var(--tc-surface-2);border-radius:5px;padding:.12em .42em;margin:.15em .16em .05em 0;font-size:.62em}.plan-warning{padding:.85em 1em;border-radius:12px;background:rgba(240,192,64,.1);border:1px solid rgba(240,192,64,.28);color:#d8c58a;font-size:.86em;line-height:1.55}@media(max-width:1050px){.plan-grid{grid-template-columns:1fr 1fr}}@media(max-width:720px){.plan-grid{grid-template-columns:1fr}}
+</style>
+""", unsafe_allow_html=True)
+
+
+def render_plan_builder_intro():
+    st.markdown("""
+<div class="plan-hero">
+  <div class="plan-kicker">TRAINING PLAN BUILDER</div>
+  <div class="plan-title">先判断这周该怎么练,再生成可执行课表</div>
+  <div class="plan-sub">根据 FIT 推算 FTP / 功体比,并结合训练负荷、睡眠/反馈、目标、可训练天数和周总量,动态生成本周重点、周期递进和 Zwift .ZWO 文件。</div>
+</div>
+""", unsafe_allow_html=True)
+
+
+def render_plan_summary_cards(pm, ftp, wkg, weight, first, key_text, load_note):
+    st.markdown(f"""
+<div class="plan-grid">
+  <div class="plan-card"><div class="k">当前阶段</div><div class="v">{pm['icon']} {pm['name']}</div><div class="d">{pm['desc']}</div></div>
+  <div class="plan-card"><div class="k">功率基础</div><div class="v">FTP {ftp}W</div><div class="d">{wkg} W/kg · {weight}kg</div></div>
+  <div class="plan-card"><div class="k">本周主题</div><div class="v" style="font-size:.96em;">{first['theme']}</div><div class="d">{first['theme_desc']}</div></div>
+  <div class="plan-card"><div class="k">关键训练</div><div class="v" style="font-size:.96em;">{key_text}</div><div class="d">{load_note}</div></div>
+</div>
+""", unsafe_allow_html=True)
