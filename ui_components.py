@@ -765,6 +765,26 @@ def render_nutrition_quick_reference():
 
 
 
+def render_nutrition_feedback_adjustments(fueling_set, special_set, weight, ftp, feedback_count):
+    st.subheader("根据最近反馈的修正")
+    if fueling_set or special_set:
+        if "低血糖感" in fueling_set or "吃少了" in fueling_set:
+            st.warning("你最近记录过低血糖感/吃少了:下次训练前 2-3 小时必须吃正餐,训练中碳水提前到前 15-20 分钟开始。")
+        if "胃不舒服" in fueling_set:
+            st.warning("你最近记录过胃不舒服:不要一下冲到 90g/h,先从 40-60g/h 做肠胃训练,并分小口摄入。")
+        if "喝少了" in fueling_set:
+            st.warning("你最近记录过喝少了:把水壶按时间喝,不要只凭口渴。")
+        if "天气太热" in special_set:
+            st.warning("近期有高温记录:饮水和钠已上调;热天强度课更容易心率漂移。")
+        if "睡眠不足" in special_set or "工作压力大" in special_set:
+            st.info("近期睡眠/压力不理想:不要用咖啡因硬顶长期疲劳,优先保证晚间恢复。")
+    else:
+        st.info("最近反馈没有明显补给风险。建议关键训练后继续记录:吃少了、胃不舒服、低血糖感、喝少了。")
+
+    st.caption(f"数据依据:体重 {weight}kg;FTP {ftp or '-'}W;训练反馈 {feedback_count} 条。补给建议用于训练辅助,不替代医学或营养师建议。")
+
+
+
 def render_recovery_intro():
     st.markdown("""
 <style>
