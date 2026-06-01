@@ -95,6 +95,8 @@ from ui_components import (
     render_empty_data_state,
     render_icp_footer as render_icp_footer_widget,
     render_mini_metric_card,
+    render_pricing_intro,
+    render_upgrade_note,
     select_ride_scope as select_ride_scope_widget,
 )
 from pages.static_pages import (
@@ -2471,100 +2473,7 @@ elif page == "💎 套餐对比":
 
     current_plan = st.session_state.user.get("plan", "free")
 
-    st.markdown("""
-<style>
-.pricing-hero {
-    padding: 1.25em 1.1em;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(255,107,53,0.13), rgba(22,27,34,0.92));
-    border: 1px solid rgba(255,107,53,0.24);
-    margin: 0.8em 0 1.1em;
-}
-.pricing-hero-title { color: #f0f6fc; font-size: 1.16em; font-weight: 760; margin-bottom: 0.35em; }
-.pricing-hero-text { color: #aab6c3; font-size: 0.9em; line-height: 1.65; }
-.plan-path {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.65em;
-    margin: 0.9em 0 1.1em;
-}
-.path-step { background: var(--tc-surface); border: 1px solid var(--tc-surface-2); border-radius: 12px; padding: 0.75em; }
-.path-step .k { color: #ff8c5a; font-weight: 750; margin-bottom: 0.2em; }
-.path-step .v { color: var(--tc-subtle); font-size: 0.82em; line-height: 1.45; }
-.plans-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.9em;
-    align-items: stretch;
-    margin-top: 0.8em;
-}
-.plan-card {
-    border-radius: 16px;
-    padding: 1.05em 0.95em;
-    min-height: 520px;
-    height: 100%;
-    position: relative;
-    box-shadow: 0 10px 28px rgba(0,0,0,0.24);
-    display: flex;
-    flex-direction: column;
-}
-.plan-name { font-size: 1.12em; font-weight: 780; margin-bottom: 0.22em; min-height: 32px; }
-.plan-price { font-size: 1.22em; font-weight: 780; color: #f0f6fc; margin: 0.25em 0 0.35em; min-height: 38px; }
-.plan-fit { color: var(--tc-subtle); font-size: 0.78em; line-height: 1.45; min-height: 44px; margin-bottom: 0.65em; }
-.plan-result {
-    color: #f0f6fc;
-    font-size: 0.86em;
-    font-weight: 700;
-    padding: 0.65em 0.7em;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 0.75em;
-    min-height: 78px;
-    line-height: 1.5;
-}
-.plan-feature { color:var(--tc-muted); font-size:0.82em; line-height:1.72; margin-bottom:0.18em; }
-.plan-badge {
-    display:inline-block; background:#238636; color:#fff; padding:3px 9px; border-radius:999px;
-    font-size:0.72em; font-weight:700; margin-top:0.75em; width: fit-content;
-}
-.plan-rec {
-    display:inline-block; background:rgba(255,107,53,0.16); color:#ff9a68;
-    border:1px solid rgba(255,107,53,0.38); padding:3px 9px; border-radius:999px;
-    font-size:0.72em; font-weight:750; margin-bottom:0.55em; width: fit-content;
-}
-.plan-card button, .plan-card [data-testid="stButton"] button { width:100% !important; }
-/* 套餐卡片:用套餐色做外框,而不是只做内部色条 */
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_free),
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_core),
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_pro),
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_coach) { min-height: 578px !important; }
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_free) > .st-key-choose_card_free,
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_core) > .st-key-choose_card_core,
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_pro) > .st-key-choose_card_pro,
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_coach) > .st-key-choose_card_coach { margin-top: auto !important; }
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_free) { border: 1.5px solid rgba(139,148,158,.72) !important; border-radius: 14px !important; box-shadow: 0 0 0 1px rgba(139,148,158,.20), 0 10px 28px rgba(0,0,0,.22) !important; }
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_core) { border: 1.5px solid rgba(255,107,53,.86) !important; border-radius: 14px !important; box-shadow: 0 0 0 1px rgba(255,107,53,.26), 0 10px 28px rgba(0,0,0,.24) !important; }
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_pro) { border: 1.5px solid rgba(240,192,64,.82) !important; border-radius: 14px !important; box-shadow: 0 0 0 1px rgba(240,192,64,.24), 0 10px 28px rgba(0,0,0,.24) !important; }
-div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_coach) { border: 1.5px solid rgba(248,81,73,.82) !important; border-radius: 14px !important; box-shadow: 0 0 0 1px rgba(248,81,73,.24), 0 10px 28px rgba(0,0,0,.24) !important; }
-.upgrade-note {
-    background: rgba(35,134,54,0.08); border: 1px solid rgba(35,134,54,0.28);
-    border-radius: 12px; padding: 0.95em 1em; margin-top: 1em;
-    color: var(--tc-muted); line-height: 1.65; font-size: 0.9em;
-}
-@media (max-width: 900px) { .plan-path, .plans-grid { grid-template-columns: 1fr; } }
-</style>
-<div class="pricing-hero">
-    <div class="pricing-hero-title">选择的不是功能,是训练方式</div>
-    <div class="pricing-hero-text">Free 让你先看懂数据;Core 让你开始每周按课表训练;Pro 把训练、恢复、营养、目标追踪连起来;Coach 用来管理多个骑手。</div>
-</div>
-<div class="plan-path">
-    <div class="path-step"><div class="k">Free</div><div class="v">体验数据<br>先看懂自己</div></div>
-    <div class="path-step"><div class="k">Core</div><div class="v">开始训练<br>每周有课表</div></div>
-    <div class="path-step"><div class="k">Pro</div><div class="v">完整闭环<br>训练+恢复+营养</div></div>
-    <div class="path-step"><div class="k">Coach</div><div class="v">多骑手管理<br>教练/工作室</div></div>
-</div>
-""", unsafe_allow_html=True)
+    render_pricing_intro()
 
     import html as _html
     plan_from_url = st.query_params.get("plan")
@@ -2630,12 +2539,7 @@ div[data-testid="stVerticalBlock"]:has(> .st-key-choose_card_coach) { border: 1.
                         st.session_state["selected_paid_plan"] = plan_key
                         st.session_state["buy_sku"] = (plan_key, "月付", PLANS[plan_key]["durations"]["月付"]["price"], PLANS[plan_key]["durations"]["月付"]["days"])
                         st.rerun()
-    st.markdown("""
-<div class="upgrade-note">
-    <b>怎么升级:</b>内测阶段先使用人工收款确认开通。选择套餐并生成订单后,付款时备注手机号或订单号;管理员确认后会开通对应套餐。<br>
-    如果你只是想体验,Free 足够;如果你想真正开始按计划训练,建议从 Core 开始。
-</div>
-""", unsafe_allow_html=True)
+    render_upgrade_note()
 
     st.subheader("开通 / 续费")
     selected_plan_for_order = st.session_state.get("selected_paid_plan") if st.session_state.get("selected_paid_plan") in ("core", "pro", "coach") else "core"
