@@ -104,7 +104,9 @@ from ui_components import (
     render_intervals_oauth_import_note,
     render_mini_metric_card,
     render_nutrition_intro,
+    render_nutrition_quick_reference,
     render_nutrition_target,
+    render_nutrition_timing_guidance,
     render_plan_builder_intro,
     render_plan_builder_styles,
     render_plan_summary_cards,
@@ -5123,43 +5125,12 @@ elif page == "🍝 营养与补给":
         feedback_summary.get('count', 0),
     )
 
-    st.subheader("训练前 / 训练中 / 训练后")
     pre_carb = round(weight * (1.5 if ride_hours <= 2 else 2.0))
     pre_protein = round(weight * 0.3)
     post_carb = round(weight * (0.8 if workout_type == "恢复骑" else 1.2))
     post_protein = round(weight * 0.35)
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        st.markdown(f"""
-**训练前 2-3 小时**
-- 碳水:**{pre_carb}g**
-- 蛋白:**{pre_protein}g**
-- 低脂、低纤维,别吃太撑
-""")
-    with col_b:
-        st.markdown(f"""
-**训练中**
-- 每 15-20 分钟吃/喝一次
-- 不要等饿了再补
-- >60g/h 建议葡萄糖+果糖组合
-""")
-    with col_c:
-        st.markdown(f"""
-**训练后 30 分钟内**
-- 碳水:**{post_carb}g**
-- 蛋白:**{post_protein}g**
-- 强度课后优先补碳水
-""")
-
-    st.subheader("按训练类型快速参考")
-    rows = [
-        ["恢复骑", "0-20g/h", "400-600ml/h", "0-300mg/h", "不饿不硬吃,重点恢复"],
-        ["Z2 长距离", "50-70g/h", "500-750ml/h", "300-600mg/h", "从前 20 分钟开始补"],
-        ["甜区/阈值", "60-80g/h", "600-850ml/h", "500-800mg/h", "训练前必须吃够"],
-        ["VO2max/间歇", "50-70g/h", "600-850ml/h", "500-800mg/h", "别让胃太撑,小口补"],
-        ["比赛/绕圈赛", "80-100g/h", "750-1000ml/h", "700-1000mg/h", "只用训练中测试过的补给"],
-    ]
-    st.dataframe(pd.DataFrame(rows, columns=["训练类型", "碳水", "水", "钠", "重点"]).astype(str), use_container_width=True, hide_index=True)
+    render_nutrition_timing_guidance(pre_carb, pre_protein, post_carb, post_protein)
+    render_nutrition_quick_reference()
 
     # ─── 补剂推荐 ───
     st.subheader("🧪 推荐补剂组合")
