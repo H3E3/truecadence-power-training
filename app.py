@@ -94,6 +94,7 @@ from ui_components import (
     load_tc_logo_svg as load_tc_logo_svg_from_path,
     render_ai_analysis_styles,
     render_ai_cached_notice,
+    render_ai_context_summary,
     render_ai_usage_panel,
     render_beta_feedback_intro,
     render_empty_data_state,
@@ -3840,11 +3841,6 @@ elif page == "🧠 AI 功率分析":
     est_ftp = estimate_ftp(rides)
     effective_ftp = actual_ftp if actual_ftp > 0 else est_ftp
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("数据范围", source_label, f"{len(rides)} 条记录")
-    c2.metric("FTP来源", "手动填写" if actual_ftp > 0 else "自动估算", f"{effective_ftp}W")
-    c3.metric("体重", f"{pweight}kg", f"{round(effective_ftp/pweight, 1)} W/kg" if pweight and effective_ftp else "")
-
     feedback = load_feedback()
     feedback_latest = max((x.get("date", "") for x in feedback), default="")
     feedback_stamp = max((x.get("created_at", "") for x in feedback), default="")
@@ -3852,65 +3848,34 @@ elif page == "🧠 AI 功率分析":
     sleep_records = load_wearable_sleep()
     sleep_latest = max((x.get("date", "") for x in sleep_records), default="")
     sleep_stamp = max((x.get("created_at", "") for x in sleep_records), default="")
-    st.caption(f"已接入训练反馈:最近记录 {feedback_summary.get('count', 0)} 条" + (f"|最新 {feedback_latest}" if feedback_latest else "|暂无反馈"))
-    st.caption(f"已接入手表睡眠:最近记录 {len(sleep_records)} 条" + (f"|最新 {sleep_latest}" if sleep_latest else "|暂无睡眠记录"))
+    feedback_rows = []
     if feedback:
-        latest_fb = feedback[0]
-        fb_pains = "、".join(latest_fb.get("pains", []) or []) or "无"
-        fb_specials = "、".join(latest_fb.get("specials", []) or []) or "无"
-        st.success(
-            f"✅ AI 已读取训练反馈:{latest_fb.get('date', '-')}|睡眠 {latest_fb.get('sleep_quality', '-')}|"
-            f"腿疲劳 {latest_fb.get('leg_fatigue', '-')}|RPE {latest_fb.get('rpe', '-')}|"
-            f"不适:{fb_pains}|特殊:{fb_specials}"
-        )
-        with st.expander("查看已接入的训练反馈", expanded=True):
-            df_ai_fb = pd.DataFrame(feedback[:5]).copy()
-            show_cols = [
-                "date", "sleep_quality", "energy", "leg_fatigue", "stress", "rpe",
-                "completion", "leg_feel", "fueling", "pains", "specials",
-                "cycle_status", "cycle_pain", "cycle_training_impact", "notes"
-            ]
-            df_ai_fb = df_ai_fb[[c for c in show_cols if c in df_ai_fb.columns]].copy()
-            for col in ["pains", "specials"]:
-                if col in df_ai_fb.columns:
-                    df_ai_fb[col] = df_ai_fb[col].apply(lambda x: "、".join(x) if isinstance(x, list) and x else "无")
-            rename_map = {
-                "date": "日期", "sleep_quality": "睡眠", "energy": "精神", "leg_fatigue": "腿疲劳",
-                "stress": "压力", "rpe": "RPE", "completion": "完成度", "leg_feel": "腿感",
-                "fueling": "补给", "pains": "不适", "specials": "特殊情况",
-                "cycle_status": "女性周期", "cycle_pain": "腹痛/腰酸", "cycle_training_impact": "周期影响",
-                "notes": "备注"
-            }
-            profile_for_cycle = load_profile()
-            inferred_cycles = [infer_cycle_status_for_date(item, profile_for_cycle) or "未记录" for item in feedback[:len(df_ai_fb)]]
-            if "cycle_status" in df_ai_fb.columns:
-                df_ai_fb["cycle_status"] = inferred_cycles
-            elif "女性周期" in df_ai_fb.columns:
-                df_ai_fb["女性周期"] = inferred_cycles
-            df_ai_fb = df_ai_fb.rename(columns=rename_map)
-            st.dataframe(df_ai_fb.astype(str), use_container_width=True, hide_index=True)
-    else:
-        st.warning("⚠️ AI 暂未读取到训练反馈。请先到「📝 训练反馈」保存一条记录。")
-
-    if sleep_records:
-        latest_sleep = sorted(sleep_records, key=lambda x: x.get("date", ""), reverse=True)[0]
-        nap_txt = f"|午睡 {latest_sleep.get('nap_minutes', 0)}min|醒后{latest_sleep.get('nap_after', '未记录')}" if latest_sleep.get('nap_minutes', 0) else ""
-        st.success(
-            f"✅ AI 已读取手表睡眠:{latest_sleep.get('date', '-')}|夜间睡眠 {latest_sleep.get('sleep_hours', '-')}h|"
-            f"评分 {latest_sleep.get('sleep_score', '-')}|HRV {latest_sleep.get('hrv', '-')}|"
-            f"静息心率 {latest_sleep.get('rest_hr', '-')}|压力 {latest_sleep.get('stress_score', '-')}|"
-            f"恢复分 {latest_sleep.get('body_battery', '-')}{nap_txt}"
-        )
-        with st.expander("查看已接入的手表睡眠", expanded=False):
-            df_sleep = pd.DataFrame(sleep_records[:7]).rename(columns={
-                "date": "日期", "source": "来源", "sleep_hours": "夜间睡眠h", "sleep_score": "评分",
-                "rest_hr": "静息心率", "hrv": "HRV", "stress_score": "压力", "body_battery": "恢复分",
-                "nap_minutes": "午睡min", "nap_quality": "午睡质量", "nap_after": "醒后状态", "nap_to_training": "到训练间隔", "note": "备注"
-            })
-            sleep_cols = [c for c in ["日期", "来源", "夜间睡眠h", "评分", "静息心率", "HRV", "压力", "恢复分", "午睡min", "午睡质量", "醒后状态", "到训练间隔", "备注"] if c in df_sleep.columns]
-            st.dataframe(df_sleep[sleep_cols].astype(str), use_container_width=True, hide_index=True)
-    else:
-        st.warning("⚠️ AI 暂未读取到手表睡眠数据。可在「🛌 恢复与睡眠」录入一条记录。")
+        df_ai_fb = pd.DataFrame(feedback[:5]).copy()
+        show_cols = [
+            "date", "sleep_quality", "energy", "leg_fatigue", "stress", "rpe",
+            "completion", "leg_feel", "fueling", "pains", "specials",
+            "cycle_status", "cycle_pain", "cycle_training_impact", "notes"
+        ]
+        df_ai_fb = df_ai_fb[[c for c in show_cols if c in df_ai_fb.columns]].copy()
+        for col in ["pains", "specials"]:
+            if col in df_ai_fb.columns:
+                df_ai_fb[col] = df_ai_fb[col].apply(lambda x: "、".join(x) if isinstance(x, list) and x else "无")
+        rename_map = {
+            "date": "日期", "sleep_quality": "睡眠", "energy": "精神", "leg_fatigue": "腿疲劳",
+            "stress": "压力", "rpe": "RPE", "completion": "完成度", "leg_feel": "腿感",
+            "fueling": "补给", "pains": "不适", "specials": "特殊情况",
+            "cycle_status": "女性周期", "cycle_pain": "腹痛/腰酸", "cycle_training_impact": "周期影响",
+            "notes": "备注"
+        }
+        profile_for_cycle = load_profile()
+        inferred_cycles = [infer_cycle_status_for_date(item, profile_for_cycle) or "未记录" for item in feedback[:len(df_ai_fb)]]
+        if "cycle_status" in df_ai_fb.columns:
+            df_ai_fb["cycle_status"] = inferred_cycles
+        elif "女性周期" in df_ai_fb.columns:
+            df_ai_fb["女性周期"] = inferred_cycles
+        df_ai_fb = df_ai_fb.rename(columns=rename_map)
+        feedback_rows = df_ai_fb.to_dict(orient="records")
+    render_ai_context_summary(source_label, len(rides), actual_ftp, effective_ftp, pweight, feedback_summary, feedback_latest, feedback_rows, sleep_records, sleep_latest)
 
     # Keep the last AI diagnosis for this exact data/profile/feedback signature.
     # This prevents page switches or refreshes from clearing the result and forcing another paid analysis.

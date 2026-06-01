@@ -1038,6 +1038,50 @@ def render_goal_verdict_summary(
 
 
 
+def render_ai_context_summary(source_label, ride_count, actual_ftp, effective_ftp, pweight, feedback_summary, feedback_latest, feedback_rows, sleep_records, sleep_latest):
+    c1, c2, c3 = st.columns(3)
+    c1.metric("数据范围", source_label, f"{ride_count} 条记录")
+    c2.metric("FTP来源", "手动填写" if actual_ftp > 0 else "自动估算", f"{effective_ftp}W")
+    c3.metric("体重", f"{pweight}kg", f"{round(effective_ftp/pweight, 1)} W/kg" if pweight and effective_ftp else "")
+
+    st.caption(f"已接入训练反馈:最近记录 {feedback_summary.get('count', 0)} 条" + (f"|最新 {feedback_latest}" if feedback_latest else "|暂无反馈"))
+    st.caption(f"已接入手表睡眠:最近记录 {len(sleep_records)} 条" + (f"|最新 {sleep_latest}" if sleep_latest else "|暂无睡眠记录"))
+    if feedback_rows:
+        latest_fb = feedback_rows[0]
+        fb_pains = "、".join(latest_fb.get("pains", []) or []) or "无"
+        fb_specials = "、".join(latest_fb.get("specials", []) or []) or "无"
+        st.success(
+            f"✅ AI 已读取训练反馈:{latest_fb.get('date', '-')}|睡眠 {latest_fb.get('sleep_quality', '-')}|"
+            f"腿疲劳 {latest_fb.get('leg_fatigue', '-')}|RPE {latest_fb.get('rpe', '-')}|"
+            f"不适:{fb_pains}|特殊:{fb_specials}"
+        )
+        with st.expander("查看已接入的训练反馈", expanded=True):
+            st.dataframe(pd.DataFrame(feedback_rows).astype(str), use_container_width=True, hide_index=True)
+    else:
+        st.warning("⚠️ AI 暂未读取到训练反馈。请先到「📝 训练反馈」保存一条记录。")
+
+    if sleep_records:
+        latest_sleep = sorted(sleep_records, key=lambda x: x.get("date", ""), reverse=True)[0]
+        nap_txt = f"|午睡 {latest_sleep.get('nap_minutes', 0)}min|醒后{latest_sleep.get('nap_after', '未记录')}" if latest_sleep.get('nap_minutes', 0) else ""
+        st.success(
+            f"✅ AI 已读取手表睡眠:{latest_sleep.get('date', '-')}|夜间睡眠 {latest_sleep.get('sleep_hours', '-')}h|"
+            f"评分 {latest_sleep.get('sleep_score', '-')}|HRV {latest_sleep.get('hrv', '-')}|"
+            f"静息心率 {latest_sleep.get('rest_hr', '-')}|压力 {latest_sleep.get('stress_score', '-')}|"
+            f"恢复分 {latest_sleep.get('body_battery', '-')}{nap_txt}"
+        )
+        with st.expander("查看已接入的手表睡眠", expanded=False):
+            df_sleep = pd.DataFrame(sleep_records[:7]).rename(columns={
+                "date": "日期", "source": "来源", "sleep_hours": "夜间睡眠h", "sleep_score": "评分",
+                "rest_hr": "静息心率", "hrv": "HRV", "stress_score": "压力", "body_battery": "恢复分",
+                "nap_minutes": "午睡min", "nap_quality": "午睡质量", "nap_after": "醒后状态", "nap_to_training": "到训练间隔", "note": "备注"
+            })
+            sleep_cols = [c for c in ["日期", "来源", "夜间睡眠h", "评分", "静息心率", "HRV", "压力", "恢复分", "午睡min", "午睡质量", "醒后状态", "到训练间隔", "备注"] if c in df_sleep.columns]
+            st.dataframe(df_sleep[sleep_cols].astype(str), use_container_width=True, hide_index=True)
+    else:
+        st.warning("⚠️ AI 暂未读取到手表睡眠数据。可在「🛌 恢复与睡眠」录入一条记录。")
+
+
+
 def render_ai_analysis_styles():
     st.markdown("""
 <style>
