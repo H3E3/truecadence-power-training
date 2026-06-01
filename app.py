@@ -92,6 +92,9 @@ _ui_components = importlib.reload(_ui_components)
 from ui_components import (
     data_scope_caption,
     load_tc_logo_svg as load_tc_logo_svg_from_path,
+    render_ai_analysis_styles,
+    render_ai_cached_notice,
+    render_ai_usage_panel,
     render_beta_feedback_intro,
     render_empty_data_state,
     render_goal_styles,
@@ -3870,60 +3873,7 @@ elif page == "🧠 AI 功率分析":
     st.title("🧠 AI 功率分析")
     st.caption("把骑行数据转成训练判断:当前强弱项、该练什么、什么时候该恢复。")
 
-    st.markdown("""
-<style>
-.ai-panel {
-    background: var(--tc-surface);
-    border: 1px solid var(--tc-surface-2);
-    border-radius: 14px;
-    padding: 1em;
-    margin: 0.8em 0 1em;
-}
-.ai-panel.hot {
-    background: linear-gradient(135deg, rgba(255,107,53,0.13), rgba(22,27,34,0.92));
-    border-color: rgba(255,107,53,0.28);
-}
-.ai-panel.good {
-    background: linear-gradient(135deg, rgba(35,134,54,0.12), rgba(22,27,34,0.92));
-    border-color: rgba(35,134,54,0.28);
-}
-.ai-panel-title {
-    color: #f0f6fc;
-    font-size: 1.02em;
-    font-weight: 720;
-    margin-bottom: 0.35em;
-}
-.ai-panel-text {
-    color: #aab6c3;
-    font-size: 0.88em;
-    line-height: 1.65;
-}
-.ai-small-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.75em;
-    margin: 0.8em 0 1em;
-}
-.ai-mini {
-    background: rgba(13,17,23,0.72);
-    border: 1px solid var(--tc-border);
-    border-radius: 12px;
-    padding: 0.8em;
-}
-.ai-mini .k {
-    color: var(--tc-subtle);
-    font-size: 0.76em;
-    margin-bottom: 0.25em;
-}
-.ai-mini .v {
-    color: #f0f6fc;
-    font-weight: 720;
-}
-@media (max-width: 900px) {
-    .ai-small-grid { grid-template-columns: 1fr; }
-}
-</style>
-""", unsafe_allow_html=True)
+    render_ai_analysis_styles()
 
     # AI usage tracking
     uid = st.session_state.user["user_id"]
@@ -3944,20 +3894,7 @@ elif page == "🧠 AI 功率分析":
     uploaded_rides = st.session_state.get('uploaded_rides', [])
     historical = load_historical()
 
-    st.markdown(f"""
-<div class="ai-panel hot">
-    <div class="ai-panel-title">本次分析会做什么?</div>
-    <div class="ai-panel-text">
-        AI 会读取当前选择的数据范围,判断 FTP、骑手类型、训练量、疲劳抗性和待改善区间。
-        <b>{'Pro / Coach 分析不扣次数' if unlimited_ai else '只有点击「🔬 开始 AI 分析」才会消耗 1 次额度'}</b>;切换数据范围、查看训练一致性不会扣次数。
-    </div>
-</div>
-<div class="ai-small-grid">
-    <div class="ai-mini"><div class="k">当前套餐</div><div class="v">{plan_name}</div></div>
-    <div class="ai-mini"><div class="k">本月剩余额度</div><div class="v">{quota_text}</div></div>
-    <div class="ai-mini"><div class="k">扣费规则</div><div class="v">{billing_rule_text}</div></div>
-</div>
-""", unsafe_allow_html=True)
+    render_ai_usage_panel(unlimited_ai, plan_name, quota_text, billing_rule_text)
 
     st.subheader("1. 选择分析数据")
     uploaded_rides, historical, use_all, rides, source_label = select_ride_scope(
@@ -4082,13 +4019,7 @@ elif page == "🧠 AI 功率分析":
     # Show persisted diagnosis if available
     if "ai_diagnosis" in st.session_state:
         cached_at = st.session_state.get("ai_diagnosis_cached_at") or cached_ai.get("generated_at", "")
-        cache_note = f"|生成时间 {cached_at}" if cached_at else ""
-        st.markdown(f"""
-<div class="ai-panel good">
-    <div class="ai-panel-title">诊断已保留</div>
-    <div class="ai-panel-text">下方结果来自当前数据范围{cache_note}。切换页面回来不会重复扣次数;{'Pro / Coach 点击重新分析也不扣次数。' if unlimited_ai else '只有点击重新分析才会重新生成并消耗 1 次额度。'}</div>
-</div>
-""", unsafe_allow_html=True)
+        render_ai_cached_notice(cached_at, unlimited_ai)
         st.markdown(st.session_state.ai_diagnosis)
         if st.button("🔄 重新分析", key="ai_reanalyze",
                      disabled=ai_over_limit,
