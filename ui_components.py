@@ -549,6 +549,47 @@ def render_intervals_oauth_import_note():
 
 
 
+def render_training_load_guidance(action_items, stale_notes, red_flags, caution_flags, use_all, has_uploaded_rides, has_recent_feedback, current_tsb_text):
+    c1, c2 = st.columns([1.05, 1])
+    if stale_notes:
+        st.info(";".join(stale_notes))
+
+    with c1:
+        st.subheader("接下来怎么练")
+        for item in action_items:
+            st.markdown(f"- {item}")
+        st.markdown(f"""
+<div class="load-panel">
+    <div class="load-panel-title">怎么理解 CTL / ATL / TSB</div>
+    <div class="load-panel-text">
+        <b>CTL</b> 是长期训练积累,代表你目前能承受多少训练;<br>
+        <b>ATL</b> 是短期疲劳,最近一周练得越猛越高,休息日会按 TSS=0 自然回落,并会从最后一次骑行持续衰减到今天;<br>
+        <b>TSB</b> 是当前新鲜度,太低说明疲劳压住了状态,太高则可能训练刺激不足或正在减量。<br><br>
+        <b>当前 TSB 解读:</b>{current_tsb_text}<br><br>
+        <b>为什么默认合并历史:</b>训练负荷看的是连续刺激和恢复趋势,单次训练只说明当天贡献。系统会先把历史 FIT 和本次上传按日期去重合并,再计算近 7 / 28 / 42 天 TSS、CTL、ATL、TSB;只有临时排查上传文件时,才建议关闭合并历史。关闭合并后,上方 verdict 和"接下来怎么练"会切换为单次上传预览口径,不作为正式训练安排依据。<br><br>
+        参考区间:&lt; -25 恢复风险较高;-25 到 -10 负荷较高;-10 到 +5 常规训练区;+5 到 +15 偏新鲜;&gt; +15 可能是比赛/测试前状态,也可能是训练刺激不足。区间不是医学或绝对过度训练判断,要结合睡眠、腿疲劳、晨脉、疼痛和训练阶段。
+    </div>
+</div>
+""", unsafe_allow_html=True)
+    with c2:
+        st.subheader("风险提示")
+        if red_flags:
+            for item in red_flags:
+                st.error(item)
+        if caution_flags:
+            for item in caution_flags:
+                st.warning(item)
+        if not red_flags and not caution_flags:
+            st.success("当前没有明显训练负荷风险。")
+        if not use_all and has_uploaded_rides:
+            st.info("当前关闭合并历史:风险提示只用于本批上传文件排查,正式训练建议请打开合并历史数据。")
+        if has_recent_feedback:
+            st.caption("最近训练反馈已接入负荷判断。")
+        else:
+            st.info("还没有训练反馈。去「📝 训练反馈」记录后,负荷判断会更贴近真实状态。")
+
+
+
 def render_training_load_styles():
     st.markdown("""
 <style>
