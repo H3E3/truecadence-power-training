@@ -128,16 +128,20 @@ def case_e07_goal_event_mapping_contract():
 def case_e08_export_steady_sessions_are_segmented():
     # Static guard for Intervals.icu compatibility: long steady exports should not be one huge SteadyState.
     app = open("app.py", "r", encoding="utf-8").read()
+    training_plan_page = open("tc_pages/training_plan_page.py", "r", encoding="utf-8").read()
     workout_export = open("services/workout_export.py", "r", encoding="utf-8").read()
+    combined_ui = app + "\n" + training_plan_page
     assert_true("remaining > 3600" in workout_export and "use = min(1800, remaining)" in workout_export, "long steady split missing")
-    assert_true("Intervals.icu / Zwift .ZWO" in app and "ERG 功率训练台 / Intervals 备选 .ERG" in app, "export labels missing")
+    assert_true("Intervals.icu / Zwift .ZWO" in combined_ui and "ERG 功率训练台 / Intervals 备选 .ERG" in combined_ui, "export labels missing")
 
 
 def case_e09_taper_goal_is_not_auto_road_race():
     app = open("app.py", "r", encoding="utf-8").read()
-    start = app.index("GOAL_TO_EVENT_TYPE = {")
-    end = app.index("TRAINING_EXPERIENCE_OPTIONS", start)
-    block = app[start:end]
+    training_plan_page = open("tc_pages/training_plan_page.py", "r", encoding="utf-8").read()
+    combined_ui = app + "\n" + training_plan_page
+    start = combined_ui.index("GOAL_TO_EVENT_TYPE = {")
+    end = combined_ui.index("TRAINING_EXPERIENCE_OPTIONS", start)
+    block = combined_ui[start:end]
     assert_true("赛前减量 / 巅峰" not in block, block)
 
 

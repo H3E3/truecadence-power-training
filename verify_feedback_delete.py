@@ -9,8 +9,9 @@ from __future__ import annotations
 from pathlib import Path
 
 app = Path('app.py').read_text(encoding='utf-8')
+profile_feedback_pages = Path('tc_pages/profile_feedback_pages.py').read_text(encoding='utf-8')
 store = Path('services/feedback_store.py').read_text(encoding='utf-8')
-combined = app + "\n" + store
+combined = app + "\n" + profile_feedback_pages + "\n" + store
 
 required = [
     'if os.path.exists(p):',

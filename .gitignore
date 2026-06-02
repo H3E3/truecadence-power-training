@@ -65,3 +65,4 @@ app.py.before_*
 # Payment / private business assets (keep out of public repo unless intentionally published)
 assets/payment_*.jpg
 assets/payment_*.png
+.worktree_safety/
