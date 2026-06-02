@@ -80,14 +80,32 @@ TRUECADENCE_ASSET_DIR=/opt/truecadence/assets
 
 See `.env.example` for environment examples.
 
+## Project structure
+
+Core Streamlit entry and page modules:
+
+- `app.py` — runtime shell: app setup, auth/session context, navigation and page dispatch.
+- `tc_pages/` — page UI modules. Formal page-level UI work should happen here instead of growing `app.py` again.
+- `ui_components.py` — shared UI components used across pages.
+- `services/` — data parsing, storage and integration helpers.
+- `rules/` and `training_plan_rules.py` — training, recovery and nutrition rules.
+
+The legacy root `pages/` directory was removed after the Stage-J page split. Use `tc_pages/` for page modules to avoid Streamlit legacy multipage auto-discovery confusion.
+
 ## Verification
 
 Run syntax and rule checks before deployment:
 
 ```bash
-python -m py_compile app.py training_plan_rules.py verify_training_rules_bridge.py verify_training_e1_regression.py
+python -m py_compile app.py tc_pages/*.py
+python verify_workout_exports.py
 python verify_training_rules_bridge.py
 python verify_training_e1_regression.py
+python verify_training_stage_f.py
+python verify_feedback_delete.py
+python verify_fit_processing.py
+python verify_recovery_nutrition_rules.py
+python tests/test_fit_parser_regression.py
 ```
 
 Expected output currently includes:
@@ -95,6 +113,11 @@ Expected output currently includes:
 ```text
 OK 18 Stage-A/B/C/D bridge checks passed
 OK 9 Stage-E1 regression checks passed
+OK 6 Stage-F progression checks passed
+OK feedback delete/clear fallback guard verified
+OK fit_processing smoke checks passed
+OK recovery/nutrition Stage-H checks passed
+All 3 FIT sample(s) parsed successfully.
 ```
 
 ## Workout export
