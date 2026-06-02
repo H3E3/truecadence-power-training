@@ -136,7 +136,7 @@ def case_e08_export_steady_sessions_are_segmented():
 def case_e09_taper_goal_is_not_auto_road_race():
     app = open("app.py", "r", encoding="utf-8").read()
     start = app.index("GOAL_TO_EVENT_TYPE = {")
-    end = app.index("}\n\n    c1, c2, c3", start)
+    end = app.index("TRAINING_EXPERIENCE_OPTIONS", start)
     block = app[start:end]
     assert_true("赛前减量 / 巅峰" not in block, block)
 

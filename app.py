@@ -138,14 +138,27 @@ from ui_components import (
     render_upload_cta_note,
     render_upload_intro,
     render_upload_next_steps,
+    render_upload_quick_diagnosis_card,
     render_vertical_spacer,
     select_ride_scope as select_ride_scope_widget,
 )
-from pages.static_pages import (
+from tc_pages.static_pages import (
     render_changelog_page,
     render_english_review_page,
     render_home_page,
     render_privacy_page,
+)
+from rules.recovery import (
+    build_recovery_advice,
+    summarize_diagnosis_sleep_recovery,
+    summarize_recovery_inputs,
+)
+from rules.nutrition import (
+    calculate_nutrition_targets,
+    feedback_sets_from_recent_feedback,
+    rank_supplements,
+    score_supplement,
+    supplement_card_context,
 )
 from rules.power_analysis import (
     POWER_PROFILE_MIN_PEER_SAMPLES,
@@ -212,6 +225,16 @@ MPS_RECORD_URL = "https://beian.mps.gov.cn/#/query/webSearch?code=13082502000150
 MPS_RECORD_ICON_PATH = Path(os.environ.get("TRUECADENCE_MPS_RECORD_ICON_PATH", ASSET_DIR / "mps_beian_icon.png"))
 PAYMENT_WECHAT_QR_PATH = Path(os.environ.get("TRUECADENCE_PAYMENT_WECHAT_QR_PATH", ASSET_DIR / "payment_wechat.jpg"))
 PAYMENT_ALIPAY_QR_PATH = Path(os.environ.get("TRUECADENCE_PAYMENT_ALIPAY_QR_PATH", ASSET_DIR / "payment_alipay.jpg"))
+ADMIN_PHONE_ALLOWLIST = {x.strip() for x in os.environ.get("TRUECADENCE_ADMIN_PHONES", "").split(",") if x.strip()}
+
+
+def is_admin_account(user_data: dict | None) -> bool:
+    user_data = user_data or {}
+    return bool(
+        user_data.get("is_admin")
+        or user_data.get("role") in ("admin", "super_admin")
+        or (ADMIN_PHONE_ALLOWLIST and str(user_data.get("phone", "")) in ADMIN_PHONE_ALLOWLIST)
+    )
 
 
 def load_tc_logo_svg():
@@ -1308,7 +1331,7 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 _nav_user = st.session_state.get("user", {}) or {}
-is_admin_user = bool(_nav_user.get("is_admin") or _nav_user.get("role") in ("admin", "super_admin") or str(_nav_user.get("phone", "")) == "18503146826")
+is_admin_user = is_admin_account(_nav_user)
 
 nav_groups = {
     "首页": {"desc": "", "pages": [("功能说明", "🏠 功能说明")]},
@@ -1423,7 +1446,7 @@ st.sidebar.divider()
 
 # ─── Rider Selector ───
 user = st.session_state.user
-is_admin_user = bool(user.get("is_admin") or user.get("role") in ("admin", "super_admin") or str(user.get("phone", "")) == "18503146826")
+is_admin_user = is_admin_account(user)
 if is_admin_user and not user.get("is_admin"):
     st.session_state.user["is_admin"] = True
     st.session_state.user["role"] = user.get("role") or "admin"
@@ -1633,6 +1656,60 @@ def load_wearable_sleep():
     user = st.session_state.get("user")
     rider = st.session_state.get("rider", "默认骑手")
     return load_wearable_sleep_for_rider(user, rider, get_rider_data_path)
+
+
+PLAN_PREF_DEFAULTS = {
+    "goal": "恢复体能 / 重建基础",
+    "weeks": 4,
+    "hours": 8,
+    "training_experience": "未填写",
+    "historical_best_ftp": 0,
+    "detraining_duration": "未填写",
+    "historical_best_wkg": 0.0,
+    "progression_preference": "标准",
+    "event_type": "无比赛",
+    "event_date": "",
+    "event_priority": "B",
+    "training_days": ['周二','周三','周五','周六','周日'],
+    "preferred_long_day": "周日",
+    "no_hard_days": [],
+}
+
+
+def get_plan_prefs_path():
+    user = st.session_state.get("user")
+    rider = st.session_state.get("rider", "默认骑手")
+    if not user:
+        return None
+    return get_rider_data_path(user["user_id"], rider, "plan_prefs")
+
+
+def load_plan_prefs():
+    path = get_plan_prefs_path()
+    if path and path.exists():
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return {**PLAN_PREF_DEFAULTS, **data}
+        except Exception:
+            pass
+    return dict(PLAN_PREF_DEFAULTS)
+
+
+def save_plan_prefs(data):
+    user = st.session_state.get("user")
+    rider = st.session_state.get("rider", "默认骑手")
+    if user:
+        save_rider_data(user["user_id"], rider, "plan_prefs", data)
+
+
+def clamp_number(value, default, min_value, max_value, as_float=False):
+    try:
+        v = float(value) if as_float else int(value)
+    except Exception:
+        v = default
+    return max(min_value, min(max_value, v))
 
 
 
@@ -1855,43 +1932,24 @@ def render_upload_quick_diagnosis(rides, profile=None):
         earliest = min(recent_dates)
         range_text = f"{earliest.strftime('%Y-%m-%d')} 至 {latest_dt.strftime('%Y-%m-%d')}"
 
-    st.markdown(f"""
-<style>
-.upload-diagnosis {{
-    border: 1px solid rgba(255,107,53,0.34);
-    border-radius: 18px;
-    padding: 1.05em 1.15em;
-    margin: 1.0em 0 1.15em;
-    background: linear-gradient(135deg, rgba(255,107,53,0.16), rgba(22,27,34,0.96));
-    box-shadow: 0 0 24px rgba(255,107,53,0.08);
-}}
-.upload-diagnosis .eyebrow {{ color:#ff9a68; font-size:0.76em; font-weight:850; letter-spacing:0.12em; margin-bottom:0.35em; }}
-.upload-diagnosis .title {{ color:#f0f6fc; font-size:1.24em; font-weight:840; margin-bottom:0.45em; }}
-.upload-diagnosis .status {{ color:{state_color}; font-size:1.02em; font-weight:800; margin:0.35em 0; }}
-.upload-diagnosis .body {{ color:#aab6c3; font-size:0.90em; line-height:1.72; }}
-.upload-diagnosis b {{ color:#ffb088; }}
-</style>
-<div class="upload-diagnosis">
-  <div class="eyebrow">TRUECADENCE QUICK READ</div>
-  <div class="title">上传后初步诊断</div>
-  <div class="status">当前状态:{state}</div>
-  <div class="body">
-    数据范围:<b>{range_text}</b>|记录:<b>{len(rides)} 条</b>|FTP:<b>{ftp}W</b>({ftp_source})|功体比:<b>{wkg} W/kg</b><br>
-    训练负荷:CTL <b>{ctl if ctl is not None else '-'}</b> / ATL <b>{atl if atl is not None else '-'}</b> / TSB <b>{tsb if tsb is not None else '-'}</b>|近7天 TSS <b>{round(recent7_tss)}</b>|近28天 TSS <b>{round(recent28_tss)}</b><br>
-    {state_desc}
-  </div>
-</div>
-""", unsafe_allow_html=True)
+    render_upload_quick_diagnosis_card(
+        state=state,
+        state_desc=state_desc,
+        state_color=state_color,
+        range_text=range_text,
+        ride_count=len(rides),
+        ftp=ftp,
+        ftp_source=ftp_source,
+        wkg=wkg,
+        ctl=ctl,
+        atl=atl,
+        tsb=tsb,
+        recent7_tss=recent7_tss,
+        recent28_tss=recent28_tss,
+        traits=traits,
+        suggestions=suggestions,
+    )
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("**能力特点**")
-        for t in traits[:4]:
-            st.markdown(f"- {t}")
-    with c2:
-        st.markdown("**下一步建议**")
-        for sug in suggestions[:5]:
-            st.markdown(f"- {sug}")
 
 
 
@@ -2106,64 +2164,12 @@ def generate_diagnosis(rides, ftp, best, weight=69, feedback=None, sleep_records
             f"1 次节奏/甜区:Tempo **{tempo_lo}-{tempo_hi}W** 或甜区 **{ss_lo}-{ss_hi}W**,用于提高有氧效率。",
         ]
 
-    # Subjective feedback interpretation
+    # Subjective feedback and wearable sleep / recovery interpretation
     feedback_summary = summarize_recent_feedback(feedback or [])
-    feedback_lines = feedback_summary.get("lines", [])
-    feedback_risk_flags = feedback_summary.get("risk_flags", [])
-
-    # Wearable sleep / recovery interpretation
-    sleep_records = sleep_records or []
-    sleep_sorted = sorted(sleep_records, key=lambda x: x.get("date", ""), reverse=True)
-    recent_sleep = []
-    today_ts = pd.Timestamp.today().normalize()
-    for item in sleep_sorted:
-        d = pd.to_datetime(item.get("date"), errors="coerce")
-        if pd.notna(d) and (today_ts - d.normalize()).days <= 14:
-            recent_sleep.append(item)
-    if not recent_sleep:
-        recent_sleep = sleep_sorted[:5]
-
-    def sleep_avg(key):
-        vals = [x.get(key) for x in recent_sleep if isinstance(x.get(key), (int, float)) and x.get(key) > 0]
-        return round(sum(vals) / len(vals), 1) if vals else 0
-
-    sleep_avg_hours = sleep_avg("sleep_hours")
-    sleep_avg_score = sleep_avg("sleep_score")
-    sleep_avg_hrv = sleep_avg("hrv")
-    sleep_avg_rest_hr = sleep_avg("rest_hr")
-    sleep_avg_stress = sleep_avg("stress_score")
-    sleep_avg_body_battery = sleep_avg("body_battery")
-    latest_sleep = sleep_sorted[0] if sleep_sorted else {}
-    sleep_lines = []
-    sleep_risk_flags = []
-    if recent_sleep:
-        nap_items = [x for x in recent_sleep if x.get("nap_minutes", 0)]
-        avg_nap = round(sum(float(x.get("nap_minutes", 0) or 0) for x in nap_items) / len(nap_items), 1) if nap_items else 0
-        nap_refresh = sum(1 for x in nap_items if x.get("nap_after") == "更清醒")
-        nap_sluggish = sum(1 for x in nap_items if x.get("nap_after") == "更困")
-        nap_phrase = f",午睡 {len(nap_items)} 次,平均 **{avg_nap}min**,更清醒 {nap_refresh} 次,更困 {nap_sluggish} 次" if nap_items else ""
-        sleep_lines.append(f"最近 {len(recent_sleep)} 条手表睡眠:平均夜间睡眠 **{sleep_avg_hours or '-'}h**,评分 **{sleep_avg_score or '-'}**,HRV **{sleep_avg_hrv or '-'}**,静息心率 **{sleep_avg_rest_hr or '-'}**,压力 **{sleep_avg_stress or '-'}**,Body Battery/恢复分 **{sleep_avg_body_battery or '-'}**{nap_phrase}。")
-        if nap_items:
-            if nap_sluggish:
-                sleep_risk_flags.append("午睡后仍昏沉,下午训练不宜直接上高强度。")
-            elif nap_refresh and 15 <= avg_nap <= 45:
-                sleep_lines.append("短午睡且醒后更清醒,可作为下午训练准备度的小幅加成,但不能完全抵消夜间睡眠债。")
-        if sleep_avg_hours and sleep_avg_hours < 5.5:
-            sleep_risk_flags.append(f"平均睡眠 {sleep_avg_hours}h,明显不足,质量课建议下调或取消。")
-        elif sleep_avg_hours and sleep_avg_hours < 6.5:
-            sleep_risk_flags.append(f"平均睡眠 {sleep_avg_hours}h,偏少,高强度训练需谨慎。")
-        if sleep_avg_score and sleep_avg_score < 55:
-            sleep_risk_flags.append(f"睡眠评分 {sleep_avg_score},恢复很差,优先恢复而非加训练量。")
-        elif sleep_avg_score and sleep_avg_score < 70:
-            sleep_risk_flags.append(f"睡眠评分 {sleep_avg_score},恢复一般,避免连续高强度。")
-        if sleep_avg_stress and sleep_avg_stress >= 70:
-            sleep_risk_flags.append(f"压力分 {sleep_avg_stress},自主神经压力偏高,训练日应保守。")
-        if sleep_avg_body_battery and sleep_avg_body_battery < 35:
-            sleep_risk_flags.append(f"恢复分 {sleep_avg_body_battery},恢复储备偏低。")
-        if not sleep_risk_flags:
-            sleep_lines.append("手表睡眠未见明显红旗,可作为正常训练的辅助确认。")
-    else:
-        sleep_lines.append("暂未录入手表睡眠数据;AI 恢复判断主要依赖训练反馈和训练负荷。")
+    recovery_diagnosis = summarize_diagnosis_sleep_recovery(feedback_summary, sleep_records or [])
+    feedback_lines = recovery_diagnosis["feedback_lines"]
+    sleep_lines = recovery_diagnosis["sleep_lines"]
+    combined_recovery_flags = recovery_diagnosis["combined_recovery_flags"]
 
     # Risks and data quality
     risk_lines = []
@@ -2178,13 +2184,8 @@ def generate_diagnosis(rides, ftp, best, weight=69, feedback=None, sleep_records
     if not risk_lines:
         risk_lines.append("当前数据质量可以支撑基础训练判断;后续继续积累近期记录,诊断会更稳定。")
 
-    feedback_badge = ""
-    if feedback_summary.get("count", 0):
-        feedback_badge = f"\n> ✅ 本报告已纳入最近 **{feedback_summary.get('count', 0)}** 条训练反馈,最新记录:**{feedback_summary.get('last_date', '未知')}**。\n"
-    else:
-        feedback_badge = "\n> ⚠️ 本报告暂未读取到训练反馈,恢复和疼痛判断主要来自功率数据。\n"
-
-    sleep_badge = f"> ✅ 本报告已纳入 **{len(recent_sleep)}** 条手表睡眠/恢复记录,最新记录:**{latest_sleep.get('date', '未知')}**。\n" if recent_sleep else "> ⚠️ 本报告暂未读取到手表睡眠/恢复记录。\n"
+    feedback_badge = recovery_diagnosis["feedback_badge"]
+    sleep_badge = recovery_diagnosis["sleep_badge"]
 
     diagnosis = f"""## 🔍 TrueCadence 骑手诊断报告
 {feedback_badge}{sleep_badge}
@@ -2240,7 +2241,6 @@ def generate_diagnosis(rides, ftp, best, weight=69, feedback=None, sleep_records
     diagnosis += "\n**手表睡眠 / 恢复数据**\n"
     for line in sleep_lines:
         diagnosis += f"- {line}\n"
-    combined_recovery_flags = (feedback_risk_flags or []) + (sleep_risk_flags or [])
     if combined_recovery_flags:
         diagnosis += "\n**训练调整建议**\n"
         for flag in combined_recovery_flags[:7]:
@@ -4071,14 +4071,28 @@ elif page == "📋 训练课表":
         "备战长距离耐力赛": "长距离耐力赛",
         "备战公路赛": "公路赛",
     }
+    TRAINING_EXPERIENCE_OPTIONS = ["未填写", "新手", "普通骑行者", "有结构化训练经验", "有比赛经验"]
+    DETRAINING_DURATION_OPTIONS = ["未填写", "无停训", "2-4周", "1-3月", "3月以上", "伤病后恢复"]
+    PROGRESSION_OPTIONS = ["保守", "标准", "略进阶"]
+    EVENT_PRIORITY_OPTIONS = ["A", "B", "C"]
+
+    plan_prefs = load_plan_prefs()
+    day_order = ['周一','周二','周三','周四','周五','周六','周日']
+    default_training_days = [d for d in plan_prefs.get("training_days", PLAN_PREF_DEFAULTS["training_days"]) if d in day_order] or PLAN_PREF_DEFAULTS["training_days"]
+    default_goal = plan_prefs.get("goal", PLAN_PREF_DEFAULTS["goal"])
+    default_event_date = datetime.date.today() + datetime.timedelta(days=28)
+    try:
+        saved_event_date = datetime.date.fromisoformat(plan_prefs.get("event_date") or "")
+    except Exception:
+        saved_event_date = default_event_date
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        goal = st.selectbox("训练目标", PLAN_GOAL_OPTIONS)
+        goal = st.selectbox("训练目标", PLAN_GOAL_OPTIONS, index=PLAN_GOAL_OPTIONS.index(default_goal) if default_goal in PLAN_GOAL_OPTIONS else 0)
     with c2:
-        weeks = st.slider("计划周期", 1, 12, 4)
+        weeks = st.slider("计划周期", 1, 12, clamp_number(plan_prefs.get("weeks"), 4, 1, 12))
     with c3:
-        hours = st.slider("每周总时长 h", 4, 20, 8)
+        hours = st.slider("每周总时长 h", 4, 20, clamp_number(plan_prefs.get("hours"), 8, 4, 20))
         st.caption("新手/刚恢复建议 3–5h；有基础 5–8h；进阶 8–12h；12h+ 适合训练基础和恢复都较稳定的人。TrueCadence 不按固定死档排课，会结合训练背景、FTP可信度、恢复/疼痛反馈和比赛时间自动调整。")
 
     suggested_event_type = GOAL_TO_EVENT_TYPE.get(goal, "无比赛")
@@ -4090,24 +4104,28 @@ elif page == "📋 训练课表":
     with st.expander("🧱 训练背景与稳定推进（阶段F，可选）", expanded=False):
         bg1, bg2, bg3 = st.columns(3)
         with bg1:
-            training_experience = st.selectbox("训练经验", ["未填写", "新手", "普通骑行者", "有结构化训练经验", "有比赛经验"], key="plan_training_experience_v1")
-            historical_best_ftp = st.number_input("历史最佳FTP W（可选）", min_value=0, max_value=600, value=0, step=5, key="plan_historical_best_ftp_v1")
+            saved_training_experience = plan_prefs.get("training_experience", PLAN_PREF_DEFAULTS["training_experience"])
+            training_experience = st.selectbox("训练经验", TRAINING_EXPERIENCE_OPTIONS, index=TRAINING_EXPERIENCE_OPTIONS.index(saved_training_experience) if saved_training_experience in TRAINING_EXPERIENCE_OPTIONS else 0, key="plan_training_experience_v1")
+            historical_best_ftp = st.number_input("历史最佳FTP W（可选）", min_value=0, max_value=600, value=clamp_number(plan_prefs.get("historical_best_ftp"), 0, 0, 600), step=5, key="plan_historical_best_ftp_v1")
         with bg2:
-            detraining_duration = st.selectbox("停训时间", ["未填写", "无停训", "2-4周", "1-3月", "3月以上", "伤病后恢复"], key="plan_detraining_duration_v1")
-            historical_best_wkg = st.number_input("历史最佳W/kg（可选）", min_value=0.0, max_value=8.0, value=0.0, step=0.1, key="plan_historical_best_wkg_v1")
+            saved_detraining_duration = plan_prefs.get("detraining_duration", PLAN_PREF_DEFAULTS["detraining_duration"])
+            detraining_duration = st.selectbox("停训时间", DETRAINING_DURATION_OPTIONS, index=DETRAINING_DURATION_OPTIONS.index(saved_detraining_duration) if saved_detraining_duration in DETRAINING_DURATION_OPTIONS else 0, key="plan_detraining_duration_v1")
+            historical_best_wkg = st.number_input("历史最佳W/kg（可选）", min_value=0.0, max_value=8.0, value=clamp_number(plan_prefs.get("historical_best_wkg"), 0.0, 0.0, 8.0, as_float=True), step=0.1, key="plan_historical_best_wkg_v1")
         with bg3:
-            progression_preference = st.selectbox("训练推进偏好", ["保守", "标准", "略进阶"], index=1, key="plan_progression_preference_v1")
+            saved_progression = plan_prefs.get("progression_preference", PLAN_PREF_DEFAULTS["progression_preference"])
+            progression_preference = st.selectbox("训练推进偏好", PROGRESSION_OPTIONS, index=PROGRESSION_OPTIONS.index(saved_progression) if saved_progression in PROGRESSION_OPTIONS else 1, key="plan_progression_preference_v1")
         st.caption("阶段F不是更难模式。它只在恢复、疼痛、FTP可信度和比赛倒计时都允许时,根据训练背景小幅调整推进速度。")
 
     with st.expander("🎯 比赛倒计时 / 专项设置（阶段D，可选）", expanded=False):
         ev1, ev2, ev3 = st.columns([1.2, 1.2, .8])
         with ev1:
-            event_type = st.selectbox("比赛类型", EVENT_TYPE_OPTIONS, key="plan_event_type_v2")
+            saved_event_type = st.session_state.get("plan_event_type_v2", plan_prefs.get("event_type", PLAN_PREF_DEFAULTS["event_type"]))
+            event_type = st.selectbox("比赛类型", EVENT_TYPE_OPTIONS, index=EVENT_TYPE_OPTIONS.index(saved_event_type) if saved_event_type in EVENT_TYPE_OPTIONS else 0, key="plan_event_type_v2")
         with ev2:
-            default_event_date = datetime.date.today() + datetime.timedelta(days=28)
-            event_date = st.date_input("比赛日期", value=default_event_date, key="plan_event_date_v1")
+            event_date = st.date_input("比赛日期", value=saved_event_date, key="plan_event_date_v1")
         with ev3:
-            event_priority = st.selectbox("优先级", ["A", "B", "C"], index=1, help="A=主要目标;B=重要训练赛;C=普通参与", key="plan_event_priority_v1")
+            saved_priority = plan_prefs.get("event_priority", PLAN_PREF_DEFAULTS["event_priority"])
+            event_priority = st.selectbox("优先级", EVENT_PRIORITY_OPTIONS, index=EVENT_PRIORITY_OPTIONS.index(saved_priority) if saved_priority in EVENT_PRIORITY_OPTIONS else 1, help="A=主要目标;B=重要训练赛;C=普通参与", key="plan_event_priority_v1")
         use_event_countdown = event_type != "无比赛"
         days_to_event = (event_date - datetime.date.today()).days if use_event_countdown else None
         if goal == "赛前减量 / 巅峰" and not use_event_countdown:
@@ -4119,8 +4137,6 @@ elif page == "📋 训练课表":
         else:
             st.caption("未启用比赛倒计时:课表按目标与当前状态生成。")
 
-    day_order = ['周一','周二','周三','周四','周五','周六','周日']
-    default_training_days = ['周二','周三','周五','周六','周日']
     sc1, sc2, sc3 = st.columns([2.2, 1.2, 1.6])
     with sc1:
         selected_training_days = st.multiselect(
@@ -4136,18 +4152,20 @@ elif page == "📋 训练课表":
     selected_training_days = [d for d in day_order if d in selected_training_days]
     days = len(selected_training_days)
     with sc2:
+        saved_long_day = plan_prefs.get("preferred_long_day", PLAN_PREF_DEFAULTS["preferred_long_day"])
         preferred_long_day = st.selectbox(
             "长距离日",
             selected_training_days,
-            index=(selected_training_days.index('周日') if '周日' in selected_training_days else len(selected_training_days)-1),
+            index=(selected_training_days.index(saved_long_day) if saved_long_day in selected_training_days else (selected_training_days.index('周日') if '周日' in selected_training_days else len(selected_training_days)-1)),
             help="长距离/Z2容量/模拟课会优先放在这一天。",
             key="plan_long_day_select_v2",
         )
     with sc3:
+        saved_no_hard_days = [d for d in plan_prefs.get("no_hard_days", []) if d in selected_training_days]
         no_hard_days = st.multiselect(
             "不安排高强度日",
             selected_training_days,
-            default=[],
+            default=saved_no_hard_days,
             help="这些天仍可安排 Z2、恢复、技术骑,但会尽量避开阈值、VO2、冲刺等质量课。",
             key="plan_no_hard_days_select_v2",
         )
@@ -4156,6 +4174,26 @@ elif page == "📋 训练课表":
         st.caption(f"实际训练日:{days} 天 | 固定休息日:" + "、".join(fixed_rest_days) + f" | 长距离优先:{preferred_long_day}")
     else:
         st.caption(f"实际训练日:7 天 | 长距离优先:{preferred_long_day}。系统仍会安排恢复/轻松日,不建议每天都高强度。")
+
+    current_plan_prefs = {
+        "goal": goal,
+        "weeks": int(weeks),
+        "hours": int(hours),
+        "training_experience": training_experience,
+        "historical_best_ftp": int(historical_best_ftp or 0),
+        "detraining_duration": detraining_duration,
+        "historical_best_wkg": float(historical_best_wkg or 0),
+        "progression_preference": progression_preference,
+        "event_type": event_type,
+        "event_date": event_date.isoformat() if hasattr(event_date, "isoformat") else str(event_date),
+        "event_priority": event_priority,
+        "training_days": selected_training_days,
+        "preferred_long_day": preferred_long_day,
+        "no_hard_days": no_hard_days,
+    }
+    saved_plan_prefs = {k: plan_prefs.get(k) for k in current_plan_prefs}
+    if current_plan_prefs != saved_plan_prefs:
+        save_plan_prefs({**current_plan_prefs, "updated_at": datetime.datetime.now().isoformat(timespec="seconds")})
 
     # ── dynamic readiness inputs: training load + feedback + sleep ──
     df_plan = pd.DataFrame(rides).sort_values('date')
@@ -4586,168 +4624,40 @@ elif page == "🛌 恢复与睡眠":
     feedback = load_feedback()
     sleep_records = load_wearable_sleep()
     feedback_summary = summarize_recent_feedback(feedback)
-    today = pd.Timestamp.today().normalize()
-    today_str = today.strftime("%Y-%m-%d")
-    todays_feedback = []
-    stale_feedback = []
-    for item in feedback:
-        d = pd.to_datetime(item.get("date"), errors="coerce")
-        if pd.notna(d) and d.normalize() == today:
-            todays_feedback.append(item)
-        elif pd.notna(d) and d.normalize() < today:
-            stale_feedback.append(item)
-    recent_feedback = sorted(todays_feedback, key=lambda x: (x.get("date", ""), x.get("created_at", "")), reverse=True)
-    stale_feedback = sorted(stale_feedback, key=lambda x: (x.get("date", ""), x.get("created_at", "")), reverse=True)
-
-    def avg_fb(key):
-        vals = [x.get(key) for x in recent_feedback if isinstance(x.get(key), (int, float))]
-        return round(sum(vals) / len(vals), 1) if vals else 0
-
     profile = load_profile()
     pweight = profile.get('weight', 69)
     ftp = get_effective_ftp(rides) if rides else (profile.get('ftp_test') or 0)
 
-    if rides:
-        df = pd.DataFrame(rides).sort_values('date')
-        df['date_dt'] = pd.to_datetime(df['date'], errors='coerce')
-        pmc_recovery = compute_daily_pmc(rides)
-        ctl = int(pmc_recovery.iloc[-1]['ctl']) if not pmc_recovery.empty else 0
-        atl = int(pmc_recovery.iloc[-1]['atl']) if not pmc_recovery.empty else 0
-        tsb = int(pmc_recovery.iloc[-1]['tsb']) if not pmc_recovery.empty else 0
-        latest_date_recovery = pmc_recovery['date_dt'].max() if not pmc_recovery.empty else df['date_dt'].max()
-        recent14 = df[df['date_dt'] >= latest_date_recovery - pd.Timedelta(days=13)] if pd.notna(latest_date_recovery) else df.tail(14)
-        recent_h = sum(r.get('dur', 0) for r in recent14.to_dict('records')) / 60
-        weekly_h = round(recent_h / 2, 1)
-    else:
-        ctl = atl = tsb = 0
-        weekly_h = 0
+    recovery_summary = summarize_recovery_inputs(
+        rides,
+        feedback,
+        sleep_records,
+        profile,
+        compute_daily_pmc_func=compute_daily_pmc,
+        infer_cycle_status_func=infer_cycle_status_for_date,
+    )
+    recovery_advice = build_recovery_advice(recovery_summary, ftp=ftp)
 
-    avg_sleep = avg_fb('sleep_quality')
-    avg_energy = avg_fb('energy')
-    avg_fatigue = avg_fb('leg_fatigue')
-    avg_stress = avg_fb('stress')
-    avg_rpe = avg_fb('rpe')
-
-    todays_sleep_records = []
-    stale_sleep_records = []
-    for item in sleep_records:
-        d = pd.to_datetime(item.get("date"), errors="coerce")
-        if pd.notna(d) and d.normalize() == today:
-            todays_sleep_records.append(item)
-        elif pd.notna(d) and d.normalize() < today:
-            stale_sleep_records.append(item)
-    recent_sleep_records = sorted(todays_sleep_records, key=lambda x: (x.get("date", ""), x.get("created_at", "")), reverse=True)
-    stale_sleep_records = sorted(stale_sleep_records, key=lambda x: (x.get("date", ""), x.get("created_at", "")), reverse=True)
-
-    def avg_sleep_metric(key):
-        vals = [x.get(key) for x in recent_sleep_records if isinstance(x.get(key), (int, float)) and x.get(key) > 0]
-        return round(sum(vals) / len(vals), 1) if vals else 0
-
-    watch_sleep_hours = avg_sleep_metric("sleep_hours")
-    watch_sleep_score = avg_sleep_metric("sleep_score")
-    watch_hrv = avg_sleep_metric("hrv")
-    watch_rest_hr = avg_sleep_metric("rest_hr")
-    watch_stress = avg_sleep_metric("stress_score")
-    nap_records = [x for x in recent_sleep_records if x.get("nap_minutes", 0)]
-    avg_nap_min = round(sum(float(x.get("nap_minutes", 0) or 0) for x in nap_records) / len(nap_records), 1) if nap_records else 0
-    nap_refresh_count = sum(1 for x in nap_records if x.get("nap_after") == "更清醒")
-    nap_sluggish_count = sum(1 for x in nap_records if x.get("nap_after") == "更困")
-    nap_good_count = sum(1 for x in nap_records if (x.get("nap_quality", 0) or 0) >= 4)
-
-    pain_counts, special_counts, cycle_counts = {}, {}, {}
-    for item in recent_feedback:
-        for pain in item.get('pains', []) or []:
-            pain_counts[pain] = pain_counts.get(pain, 0) + 1
-        for special in item.get('specials', []) or []:
-            special_counts[special] = special_counts.get(special, 0) + 1
-        cycle_status = infer_cycle_status_for_date(item, profile)
-        if cycle_status:
-            cycle_counts[cycle_status] = cycle_counts.get(cycle_status, 0) + 1
-
-    red_flags = []
-    caution_flags = []
-    if any(k in special_counts for k in ["发烧"]):
-        red_flags.append("近期记录过发烧")
-    if any(k in cycle_counts for k in ["经期第1-2天"]):
-        latest_cycle = next((x for x in recent_feedback if infer_cycle_status_for_date(x, profile) == '经期第1-2天'), {})
-        if latest_cycle.get('cycle_pain') in ['中', '重'] or latest_cycle.get('cycle_training_impact') == '明显':
-            red_flags.append("经期前段且身体反应明显")
-        else:
-            caution_flags.append("经期前段,建议降低训练强度")
-    if any(k in cycle_counts for k in ["经前期/PMS"]):
-        caution_flags.append("经前期/PMS,注意睡眠、情绪和腿感波动")
-    if any(k in special_counts for k in ["感冒"]):
-        caution_flags.append("近期感冒/身体不适")
-    if avg_sleep and avg_sleep <= 2:
-        red_flags.append("睡眠质量很差")
-    elif avg_sleep and avg_sleep <= 3:
-        caution_flags.append("睡眠质量一般")
-    if watch_sleep_hours and watch_sleep_hours < 5.5:
-        red_flags.append(f"手表睡眠 {watch_sleep_hours}h,明显不足")
-    elif watch_sleep_hours and watch_sleep_hours < 6.5:
-        caution_flags.append(f"手表睡眠 {watch_sleep_hours}h,偏少")
-    if watch_sleep_score and watch_sleep_score < 55:
-        red_flags.append(f"睡眠评分 {watch_sleep_score},恢复很差")
-    elif watch_sleep_score and watch_sleep_score < 70:
-        caution_flags.append(f"睡眠评分 {watch_sleep_score},恢复一般")
-    if watch_stress and watch_stress >= 70:
-        caution_flags.append(f"手表压力 {watch_stress},自主神经压力偏高")
-    if nap_records:
-        if nap_sluggish_count:
-            caution_flags.append("午睡后仍昏沉,下午高强度需谨慎")
-        elif nap_refresh_count and 15 <= avg_nap_min <= 45 and nap_good_count:
-            caution_flags.append("午睡对下午训练有小幅恢复加成,但不等同于夜间睡眠")
-        elif avg_nap_min > 90:
-            caution_flags.append("午睡时间较长,注意睡眠惯性和夜间睡眠节律")
-    if avg_fatigue and avg_fatigue >= 5:
-        red_flags.append("腿部疲劳很高")
-    elif avg_fatigue and avg_fatigue >= 4:
-        caution_flags.append("腿部疲劳偏高")
-    if avg_rpe and avg_rpe >= 8:
-        caution_flags.append("最近训练主观强度偏高")
-    if avg_stress and avg_stress >= 4:
-        caution_flags.append("生活/工作压力偏高")
-    for pain, n in pain_counts.items():
-        if n >= 2:
-            caution_flags.append(f"{pain} 不适重复出现")
-    if tsb < -20:
-        red_flags.append(f"TSB {tsb},深度疲劳")
-    elif tsb < -10:
-        caution_flags.append(f"TSB {tsb},疲劳偏高")
-    if weekly_h > 12:
-        caution_flags.append(f"近两周周均 {weekly_h}h,训练量偏高")
-
-    if red_flags:
-        advice_class = "recovery-red"
-        advice_tag = "RED FLAG"
-        advice_main = "今天建议完全休息,或只做非常轻松恢复活动"
-        next_action = ["取消 VO2max、阈值、冲刺和大扭矩爬坡。", "优先睡眠、补水、正常进食;发烧/明显感染时不要训练。", "如果疼痛或症状持续,先处理身体问题,不要硬顶课表。"]
-    elif caution_flags:
-        advice_class = "recovery-yellow"
-        advice_tag = "CAUTION"
-        advice_main = "今天建议降强度:Z1-Z2 恢复骑或缩短训练"
-        next_action = [f"恢复骑 30-60 分钟,功率控制在 <{round(ftp*0.55) if ftp else 90}W。", "如果必须训练,把质量课改成短 Z2,不做力竭间歇。", "今晚优先睡眠,明天根据腿感和精神再决定是否恢复强度。"]
-    elif tsb > 10 and avg_energy and avg_energy >= 4:
-        advice_class = "recovery-blue"
-        advice_tag = "READY"
-        advice_main = "状态较好,可以安排关键训练或测试"
-        next_action = ["适合做阈值、VO2max、FTP测试或比赛模拟。", "热身要充分,训练后及时补碳水和蛋白。", "不要因为状态好连续多天堆高强度。"]
-    else:
-        advice_class = "recovery-green"
-        advice_tag = "NORMAL"
-        advice_main = "今天可以正常训练,但保持计划内强度"
-        next_action = ["按原计划训练,不额外加码。", "强度课后记录 RPE、腿感、睡眠和疼痛。", "如果热身中感觉异常疲劳,主动降为 Z2。"]
-
-    reasons = red_flags + caution_flags
-    stale_notes = []
-    if not recent_feedback and stale_feedback:
-        latest_feedback_date = stale_feedback[0].get("date", "")
-        stale_notes.append(f"今天({today_str})没有新的主观反馈;旧反馈最新为 {latest_feedback_date},只展示历史,不参与今天建议")
-    if not recent_sleep_records and stale_sleep_records:
-        latest_sleep_date = stale_sleep_records[0].get("date", "")
-        stale_notes.append(f"今天({today_str})没有新的手表睡眠/午睡记录;旧记录最新为 {latest_sleep_date},只展示历史,不参与今天建议")
-    if not reasons:
-        reasons = ["训练负荷和今天记录没有明显红旗"]
+    ctl = recovery_summary['ctl']
+    atl = recovery_summary['atl']
+    tsb = recovery_summary['tsb']
+    weekly_h = recovery_summary['weekly_h']
+    watch_sleep_hours = recovery_summary['watch_sleep_hours']
+    watch_sleep_score = recovery_summary['watch_sleep_score']
+    watch_hrv = recovery_summary['watch_hrv']
+    avg_nap_min = recovery_summary['avg_nap_min']
+    nap_refresh_count = recovery_summary['nap_refresh_count']
+    nap_sluggish_count = recovery_summary['nap_sluggish_count']
+    nap_records = recovery_summary['nap_records']
+    pain_counts = recovery_summary['pain_counts']
+    special_counts = recovery_summary['special_counts']
+    cycle_counts = recovery_summary['cycle_counts']
+    advice_class = recovery_advice['advice_class']
+    advice_tag = recovery_advice['advice_tag']
+    advice_main = recovery_advice['advice_main']
+    next_action = recovery_advice['next_action']
+    reasons = recovery_advice['reasons']
+    stale_notes = recovery_advice['stale_notes']
 
     render_recovery_advice_summary(
         advice_class,
@@ -4886,13 +4796,7 @@ elif page == "🍝 营养与补给":
     feedback_summary = summarize_recent_feedback(feedback)
     recent_feedback = sorted(feedback, key=lambda x: (x.get('date', ''), x.get('created_at', '')), reverse=True)[:5]
 
-    special_set = set()
-    fueling_set = set()
-    for item in recent_feedback:
-        for s_item in item.get('specials', []) or []:
-            special_set.add(s_item)
-        if item.get('fueling') and item.get('fueling') != '正常':
-            fueling_set.add(item.get('fueling'))
+    special_set, fueling_set = feedback_sets_from_recent_feedback(recent_feedback)
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -4904,46 +4808,31 @@ elif page == "🍝 营养与补给":
     with c4:
         environment = st.selectbox("环境", ["正常", "天气太热", "天气太冷", "室内骑行"], index=1 if "天气太热" in special_set else 0, key="nut_environment")
 
-    if workout_type == "恢复骑":
-        carb_lo, carb_hi = 0, 20
-        water_lo, water_hi = 400, 600
-        sodium_lo, sodium_hi = 0, 300
-        intensity_note = "恢复骑主要目标是促进血液循环,不需要强行补很多糖。"
-    elif workout_type == "Z2 长距离":
-        carb_lo, carb_hi = (30, 50) if ride_hours <= 2 else (50, 70)
-        water_lo, water_hi = 500, 750
-        sodium_lo, sodium_hi = 300, 600
-        intensity_note = "Z2 长距离要从前 20 分钟就开始少量多次补,不要等饿了再吃。"
-    elif workout_type == "甜区/阈值":
-        carb_lo, carb_hi = 60, 80
-        water_lo, water_hi = 600, 850
-        sodium_lo, sodium_hi = 500, 800
-        intensity_note = "甜区/阈值会明显消耗糖原,训练前和训练中都要有碳水支持。"
-    elif workout_type == "VO2max/间歇":
-        carb_lo, carb_hi = 50, 70
-        water_lo, water_hi = 600, 850
-        sodium_lo, sodium_hi = 500, 800
-        intensity_note = "VO2max 更怕胃里太撑,训练前吃够,训练中小口补。"
-    else:
-        carb_lo, carb_hi = 80, 100
-        water_lo, water_hi = 750, 1000
-        sodium_lo, sodium_hi = 700, 1000
-        intensity_note = "比赛日目标是稳定供能,不要尝试没测试过的新补给。"
-
-    if environment in ["天气太热", "室内骑行"]:
-        water_lo += 150; water_hi += 250
-        sodium_lo += 200; sodium_hi += 300
-    if "低血糖感" in fueling_set or "吃少了" in fueling_set:
-        carb_lo += 10; carb_hi += 10
-    if "胃不舒服" in fueling_set:
-        carb_hi = min(carb_hi, 70)
-
-    total_carb_lo = round(carb_lo * ride_hours)
-    total_carb_hi = round(carb_hi * ride_hours)
-    total_water_lo = round(water_lo * ride_hours)
-    total_water_hi = round(water_hi * ride_hours)
-    total_sodium_lo = round(sodium_lo * ride_hours)
-    total_sodium_hi = round(sodium_hi * ride_hours)
+    nutrition_targets = calculate_nutrition_targets(
+        weight=weight,
+        ride_hours=ride_hours,
+        workout_type=workout_type,
+        environment=environment,
+        fueling_set=fueling_set,
+        feedback_count=feedback_summary.get('count', 0),
+    )
+    carb_lo = nutrition_targets['carb_lo']
+    carb_hi = nutrition_targets['carb_hi']
+    water_lo = nutrition_targets['water_lo']
+    water_hi = nutrition_targets['water_hi']
+    sodium_lo = nutrition_targets['sodium_lo']
+    sodium_hi = nutrition_targets['sodium_hi']
+    intensity_note = nutrition_targets['intensity_note']
+    total_carb_lo = nutrition_targets['total_carb_lo']
+    total_carb_hi = nutrition_targets['total_carb_hi']
+    total_water_lo = nutrition_targets['total_water_lo']
+    total_water_hi = nutrition_targets['total_water_hi']
+    total_sodium_lo = nutrition_targets['total_sodium_lo']
+    total_sodium_hi = nutrition_targets['total_sodium_hi']
+    pre_carb = nutrition_targets['pre_carb']
+    pre_protein = nutrition_targets['pre_protein']
+    post_carb = nutrition_targets['post_carb']
+    post_protein = nutrition_targets['post_protein']
 
     render_nutrition_target(
         carb_lo,
@@ -4984,55 +4873,20 @@ elif page == "🍝 营养与补给":
         pass
 
     if supplements:
-        def sup_score(sup):
-            sc = 0
-            if sup["carbs_g"] >= 40: sc += 1
-            if environment in ["天气太热", "室内骑行"] and sup["electrolytes_mg"] >= 200: sc += 2
-            if "胃不舒服" in fueling_set and sup["type"] == "软糖": sc += 2
-            if workout_type in ["比赛/绕圈赛", "VO2max/间歇"] and sup.get("caffeine"): sc += 1
-            if workout_type == "恢复骑" and sup.get("caffeine"): sc -= 1
-            if workout_type == "比赛/绕圈赛" and "电解质" in sup.get("tags", []): sc += 1
-            if environment in ["天气太热", "室内骑行"] and sup.get("electrolytes_mg", 0) < 100: sc -= 1
-            return sc
-
-        ranked = sorted(supplements, key=sup_score, reverse=True)
-        top = ranked[:3]
+        top = rank_supplements(supplements, environment=environment, fueling_set=fueling_set, workout_type=workout_type, limit=3)
 
         sup_cols = st.columns(len(top))
         for i, sup in enumerate(top):
             with sup_cols[i]:
-                servings_needed = max(1, round(carb_hi / sup["carbs_g"], 1)) if sup["carbs_g"] else 0
-                badge = "⭐ 首选" if i == 0 else ("👍 备选" if i == 1 else "💡 调剂")
                 tags_text = " · ".join(sup.get("tags", [])[:3])
-                score = sup_score(sup)
-                card_tone = "normal"
-                reason_parts = []
-                if environment in ["天气太热", "室内骑行"] and sup.get("electrolytes_mg", 0) >= 200:
-                    card_tone = "heat"
-                    reason_parts.append("高温/室内:补钠优先")
-                if "胃不舒服" in fueling_set and sup.get("type") == "软糖":
-                    card_tone = "gut"
-                    reason_parts.append("胃不适:软糖更温和")
-                if workout_type in ["比赛/绕圈赛", "VO2max/间歇"] and sup.get("caffeine"):
-                    card_tone = "caffeine"
-                    reason_parts.append("高强度:咖啡因加成")
-                if workout_type == "恢复骑" and sup.get("caffeine"):
-                    card_tone = "caution"
-                    reason_parts.append("恢复骑:咖啡因谨慎")
-                if i == 0 and card_tone == "normal":
-                    card_tone = "primary"
-                    reason_parts.append("当前最匹配")
-
-                tone_styles = {
-                    "primary": ("rgba(255,107,53,0.72)", "rgba(255,107,53,0.15)", "rgba(255,107,53,0.20)", "#ff9a68"),
-                    "heat": ("rgba(88,166,255,0.72)", "rgba(88,166,255,0.13)", "rgba(88,166,255,0.20)", "#79c0ff"),
-                    "gut": ("rgba(35,134,54,0.72)", "rgba(35,134,54,0.13)", "rgba(35,134,54,0.20)", "#7ee787"),
-                    "caffeine": ("rgba(210,168,255,0.72)", "rgba(210,168,255,0.13)", "rgba(210,168,255,0.20)", "#d2a8ff"),
-                    "caution": ("rgba(240,192,64,0.72)", "rgba(240,192,64,0.12)", "rgba(240,192,64,0.20)", "#f0c040"),
-                    "normal": ("rgba(139,148,158,0.42)", "rgba(48,54,61,0.32)", "rgba(48,54,61,0.26)", "var(--tc-subtle)"),
-                }
-                border_color, bg_glow, shadow_glow, accent_color = tone_styles[card_tone]
-                reason_text = " · ".join(reason_parts) if reason_parts else f"匹配分 {score}"
+                card_ctx = supplement_card_context(sup, index=i, carb_hi=carb_hi, environment=environment, fueling_set=fueling_set, workout_type=workout_type)
+                servings_needed = card_ctx["servings_needed"]
+                badge = card_ctx["badge"]
+                border_color = card_ctx["border_color"]
+                bg_glow = card_ctx["bg_glow"]
+                shadow_glow = card_ctx["shadow_glow"]
+                accent_color = card_ctx["accent_color"]
+                reason_text = card_ctx["reason_text"]
                 st.markdown(f"""<div style="background:linear-gradient(135deg, {bg_glow}, var(--tc-surface) 72%); border:1.5px solid {border_color}; box-shadow:0 0 0 1px {shadow_glow}, 0 10px 26px rgba(0,0,0,0.16); border-radius:13px; padding:0.85em; margin:0.3em 0;">
 <div style="color:{accent_color}; font-size:0.72em; font-weight:780; letter-spacing:0.08em; margin-bottom:0.3em;">{badge}</div>
 <div style="color:#f0f6fc; font-size:1.02em; font-weight:760;">{sup['name']}</div>

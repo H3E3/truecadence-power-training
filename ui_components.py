@@ -370,6 +370,62 @@ def render_upload_next_steps(new_ride_count: int):
 """, unsafe_allow_html=True)
 
 
+def render_upload_quick_diagnosis_card(
+    *,
+    state: str,
+    state_desc: str,
+    state_color: str,
+    range_text: str,
+    ride_count: int,
+    ftp: float | int,
+    ftp_source: str,
+    wkg: float | int,
+    ctl,
+    atl,
+    tsb,
+    recent7_tss: float,
+    recent28_tss: float,
+    traits: list[str],
+    suggestions: list[str],
+):
+    st.markdown(f"""
+<style>
+.upload-diagnosis {{
+    border: 1px solid rgba(255,107,53,0.34);
+    border-radius: 18px;
+    padding: 1.05em 1.15em;
+    margin: 1.0em 0 1.15em;
+    background: linear-gradient(135deg, rgba(255,107,53,0.16), rgba(22,27,34,0.96));
+    box-shadow: 0 0 24px rgba(255,107,53,0.08);
+}}
+.upload-diagnosis .eyebrow {{ color:#ff9a68; font-size:0.76em; font-weight:850; letter-spacing:0.12em; margin-bottom:0.35em; }}
+.upload-diagnosis .title {{ color:#f0f6fc; font-size:1.24em; font-weight:840; margin-bottom:0.45em; }}
+.upload-diagnosis .status {{ color:{state_color}; font-size:1.02em; font-weight:800; margin:0.35em 0; }}
+.upload-diagnosis .body {{ color:#aab6c3; font-size:0.90em; line-height:1.72; }}
+.upload-diagnosis b {{ color:#ffb088; }}
+</style>
+<div class="upload-diagnosis">
+  <div class="eyebrow">TRUECADENCE QUICK READ</div>
+  <div class="title">上传后初步诊断</div>
+  <div class="status">当前状态:{state}</div>
+  <div class="body">
+    数据范围:<b>{range_text}</b>|记录:<b>{ride_count} 条</b>|FTP:<b>{ftp}W</b>({ftp_source})|功体比:<b>{wkg} W/kg</b><br>
+    训练负荷:CTL <b>{ctl if ctl is not None else '-'}</b> / ATL <b>{atl if atl is not None else '-'}</b> / TSB <b>{tsb if tsb is not None else '-'}</b>|近7天 TSS <b>{round(recent7_tss)}</b>|近28天 TSS <b>{round(recent28_tss)}</b><br>
+    {state_desc}
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("**能力特点**")
+        for t in traits[:4]:
+            st.markdown(f"- {t}")
+    with c2:
+        st.markdown("**下一步建议**")
+        for sug in suggestions[:5]:
+            st.markdown(f"- {sug}")
+
 
 def render_profile_intro():
     st.markdown("""
