@@ -97,6 +97,21 @@ def estimate_best_powers(rides, ftp=None):
         best['1min'] = round(ftp * 1.60)
     if best['30s'] == 0 and '30s' not in excluded_anywhere:
         best['30s'] = round(best['5s'] * 0.80) if best['5s'] > 0 else round(ftp * 2.0)
+
+    # A power-duration curve must be non-increasing as duration gets longer:
+    # best 40min cannot be lower than best 60min, best 20min cannot be lower
+    # than best 40min, etc. In real data, longer-window values can come from
+    # FIT record curves while a shorter neighboring window is missing or only
+    # has a conservative legacy fallback. Raise shorter windows to at least the
+    # next longer known value so the displayed curve preserves the physical
+    # constraint without inventing higher-than-evidence long-duration power.
+    for shorter, longer in reversed(list(zip(keys, keys[1:]))):
+        if shorter in excluded_anywhere:
+            continue
+        short_val = best.get(shorter, 0) or 0
+        long_val = best.get(longer, 0) or 0
+        if long_val and short_val < long_val:
+            best[shorter] = round(long_val)
     return best
 
 def calculate_power_zones(ftp):

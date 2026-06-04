@@ -1362,7 +1362,7 @@ nav_groups = {
     "导入数据": {"desc": "FIT 与平台数据", "pages": [("FIT 上传", "📤 上传分析"), ("平台导入", "🔗 数据导入")]},
     "AI 分析": {"desc": "核心诊断", "pages": [("AI 分析", "🧠 AI 功率分析")]},
     "我的分析": {"desc": "能力、恢复", "pages": [("功率仪表盘", "📊 功率仪表盘"), ("恢复睡眠", "🛌 恢复与睡眠"), ("营养补给", "🍝 营养与补给")]},
-    "训练建议": {"desc": "负荷、课表、反馈", "pages": [("训练负荷", "📈 训练负荷"), ("训练课表", "📋 训练课表"), ("训练反馈", "📝 训练反馈")]},
+    "训练建议": {"desc": "负荷、反馈", "pages": [("训练负荷", "📈 训练负荷"), ("训练反馈", "📝 训练反馈")]}, 
     "数据与支持": {"desc": "隐私、反馈、版本", "pages": [("数据隐私", "🔐 数据隐私"), ("内测反馈", "🐞 内测反馈"), ("套餐对比", "💎 套餐对比"), ("更新日志", "📌 更新日志")]},
     "English / Review": {"desc": "Platform review", "pages": [("Review", "🌐 English / Review")]},
 }
@@ -1396,23 +1396,13 @@ st.sidebar.markdown('<div class="tc-nav-kicker">Flow</div>', unsafe_allow_html=T
 plan_for_nav = PLANS.get(st.session_state.get("user", {}).get("plan", "free"), PLANS["free"]).get("level", 0)
 for name in section_names:
     is_active = name == nav_section
-    if name == "训练建议" and plan_for_nav >= 1:
-        on_training_plan = page == "📋 训练课表"
-        parent_active = is_active and not on_training_plan
-        if st.sidebar.button("训练建议", key=f"nav_btn_{name}", use_container_width=True, type=("primary" if parent_active else "secondary")):
-            _set_nav(name)
-            st.rerun()
-        if st.sidebar.button("生成课表", key="btn_quick_training_plan", use_container_width=True, type=("primary" if on_training_plan else "secondary")):
-            _set_nav("训练建议", "训练课表")
-            st.rerun()
-        continue
     if st.sidebar.button(name, key=f"nav_btn_{name}", use_container_width=True, type=("primary" if is_active else "secondary")):
         first_label = nav_groups[name]["pages"][0][0]
         _set_nav(name, first_label)
         st.rerun()
 
-visible_subs = sub_pages if nav_section == "训练建议" else [(lbl, emoji) for lbl, emoji in sub_pages if lbl != "训练课表"]
-if len(visible_subs) > 1 and not (nav_section == "训练建议" and page == "📋 训练课表"):
+visible_subs = [(lbl, emoji) for lbl, emoji in sub_pages if lbl != "训练课表"]
+if len(visible_subs) > 1:
     st.sidebar.markdown('<div class="tc-nav-kicker">Detail</div>', unsafe_allow_html=True)
     cols = st.sidebar.columns(2)
     for i, (label, _) in enumerate(visible_subs):
@@ -2277,7 +2267,6 @@ def generate_diagnosis(rides, ftp, best, weight=69, feedback=None, sleep_records
 
     diagnosis += "\n### 11. 下一步操作\n"
     diagnosis += "- 去 **📊 功率仪表盘** 看功率曲线和区间细节。\n"
-    diagnosis += "- 如果已解锁 Core,进入 **📋 训练课表** 生成可执行课表。\n"
     diagnosis += "- 在 **👤 骑手档案** 中补充真实 FTP、体重、最大心率和训练目标,后续判断会更准。\n"
 
     return diagnosis
@@ -2451,6 +2440,7 @@ elif page == "🔗 数据导入":
         download_intervals_activity_fit=download_intervals_activity_fit,
         parse_fit_files=parse_fit_files,
         ride_from_intervals_summary=ride_from_intervals_summary,
+        enrich_rides=enrich_rides,
         load_historical=load_historical,
         merge_rides=merge_rides,
         save_current_rides=save_current_rides,
@@ -2469,6 +2459,8 @@ elif page == "👤 骑手档案":
         plan_info=plan_info,
         hr_zones_by_max=hr_zones_by_max,
         hr_zones_by_lthr=hr_zones_by_lthr,
+        load_plan_prefs=load_plan_prefs,
+        save_plan_prefs=save_plan_prefs,
     )
 elif page == "📊 功率仪表盘":
     render_power_dashboard_page(
@@ -2536,6 +2528,7 @@ elif page == "📋 训练课表":
         enrich_rides=enrich_rides,
         data_scope_caption=data_scope_caption,
         load_profile=load_profile,
+        save_rider_profile=save_rider_profile,
         estimate_ftp=estimate_ftp,
         estimate_best_powers=estimate_best_powers,
         infer_cycle_status_for_date=infer_cycle_status_for_date,
@@ -2616,4 +2609,5 @@ elif page == "🎯 目标追踪":
         compute_daily_pmc=compute_daily_pmc,
         data_scope_caption=data_scope_caption,
         load_feedback=load_feedback,
+        render_footer=render_icp_footer,
     )

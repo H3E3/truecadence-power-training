@@ -138,6 +138,7 @@ def render_home_page():
 }
 </style>
 
+
 <div class="tc-hero">
     <div class="tc-eyebrow">TRUECADENCE · AI CYCLING COACH</div>
     <div class="tc-hero-title">上传骑行数据,知道你<span>下一步该怎么练</span></div>
@@ -260,6 +261,28 @@ def render_changelog_page():
 .log-pill { display:inline-block; border:1px solid rgba(255,107,53,.35); color:#ffb088; border-radius:999px; padding:.12em .55em; margin:.1em .25em .1em 0; font-size:.78em; }
 </style>
 <div class="log-card">
+  <div class="date">下一阶段计划</div>
+  <div class="title">正式版 UI 全面设计与平台同步</div>
+  <div class="text">
+    <span class="log-pill">正式 UI</span> 全面整理首页、导入、分析、课表、恢复、营养和套餐页面,让用户一眼知道现在状态、问题原因和下一步该做什么。<br>
+    <span class="log-pill">更易懂</span> 减少内测感和技术表达,把复杂指标翻译成更简单的训练结论、风险提示和操作按钮。<br>
+    <span class="log-pill">课程同步</span> 推进 Intervals.icu 课程同步,让 TrueCadence 生成的训练课可以更方便地进入日常训练平台。<br>
+    <span class="log-pill">基础信息同步</span> 推进骑手基础信息同步,减少 FTP、体重、心率区间、训练目标等信息在多个平台重复填写。<br>
+    <span class="log-pill">稳定上线</span> 正式版 UI 和同步能力会分批上线,每一批都先验证数据保存、训练判断和导出/同步稳定性。
+  </div>
+</div>
+<div class="log-card">
+  <div class="date">2026-06-02</div>
+  <div class="title">代码拆分上线、功率曲线修正与套餐订单门禁</div>
+  <div class="text">
+    <span class="log-pill">架构</span> 完成一轮核心代码拆分上线,将训练指标、FIT 解析、功率分析、页面模块、数据导入和 UI 组件进一步拆开,降低后续维护和线上修复风险。<br>
+    <span class="log-pill">修复</span> 修正数据导入后分析流程中部分解析结果未能继续进入训练指标计算的问题,上传 / 导入后的功率、TSS 和训练负荷会更稳定地衔接到后续页面。<br>
+    <span class="log-pill">修复</span> 功率持续时间曲线增加单调性保护:更长时间窗口的最佳功率不会再高于更短时间窗口,避免 60min 高于 40min 等不符合训练常识的显示。<br>
+    <span class="log-pill">修复</span> Coach 当前套餐用户不再能重复选择 Core / Pro / Coach 生成开通订单;当前套餐和低等级套餐会禁用,避免误下单。<br>
+    <span class="log-pill">验证</span> 上线前后完成本地编译、训练指标/训练规则/导出回归、线上服务状态、HTTP、公网页面和近期日志检查。
+  </div>
+</div>
+<div class="log-card">
   <div class="date">2026-06-01</div>
   <div class="title">自动课表稳定推进、TSS口径统一与训练反馈删除修复</div>
   <div class="text">
@@ -349,17 +372,7 @@ def render_changelog_page():
   </div>
 </div>
 
-<div class="log-card">
-  <div class="date">下一阶段计划</div>
-  <div class="title">代码拆分与正式版 UI 重设计</div>
-  <div class="text">
-    <span class="log-pill">代码拆分</span> 下一阶段优先把当前大型单文件逐步拆分为稳定模块,降低后续功能迭代和线上修复风险。优先拆出 fit_parser、training_metrics、training_plan、workout_export、intervals_import、billing、feedback_store、rider_store 等模块。<br>
-    <span class="log-pill">正式 UI</span> 开始正式版界面重设计:减少内测/调试痕迹,让首页、训练负荷、功率画像、训练课表、恢复与睡眠的结论、依据和下一步动作更清楚。<br>
-    <span class="log-pill">交互收口</span> 统一按钮、卡片、提示、删除确认、导出下载和错误提示口径,避免用户在不同页面看到不一致的操作逻辑。<br>
-    <span class="log-pill">稳定优先</span> 拆分和 UI 重做会分批本地验证、小步上线;不为了速度牺牲当前训练判断、数据保存和导出稳定性。<br>
-    <span class="log-pill">后续增强</span> Intervals.icu OAuth 已接入;课表同步、Strava OAuth、反馈处理状态、数据可信度继续排队,但优先级排在代码结构和正式 UI 稳定之后。
-  </div>
-</div>
+
 <div class="log-card">
   <div class="date">反馈入口</div>
   <div class="title">你的反馈会影响优先级</div>

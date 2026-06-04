@@ -16,7 +16,6 @@ from ui_components import (
     render_goal_reassessment_notes,
     render_goal_styles,
     render_goal_verdict_summary,
-    render_icp_footer,
     render_nutrition_feedback_adjustments,
     render_nutrition_intro,
     render_nutrition_quick_reference,
@@ -378,6 +377,7 @@ def render_goal_tracking_page(
     compute_daily_pmc,
     data_scope_caption,
     load_feedback,
+    render_footer,
 ):
     require_plan(2, "🎯 目标追踪")
     st.title("🎯 目标追踪")
@@ -556,6 +556,7 @@ def render_goal_tracking_page(
 
     st.sidebar.caption("TrueCadence v1.0")
     st.sidebar.caption(f"{datetime.date.today()}")
-    render_icp_footer()
+    if render_footer:
+        render_footer()
 
 

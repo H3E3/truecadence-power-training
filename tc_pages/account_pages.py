@@ -109,6 +109,12 @@ def render_pricing_page(
     st.caption("先免费看懂数据,再用 Core 开始系统训练;如果你有比赛和提升目标,Pro 会把训练、恢复、营养和目标追踪连成闭环。")
 
     current_plan = st.session_state.user.get("plan", "free")
+    current_level = int(PLANS.get(current_plan, PLANS.get("free", {})).get("level", 0) or 0)
+    paid_plan_keys = ("core", "pro", "coach")
+    available_paid_plan_keys = [
+        plan_key for plan_key in paid_plan_keys
+        if int(PLANS.get(plan_key, {}).get("level", 0) or 0) > current_level
+    ]
 
     render_pricing_intro()
 
@@ -116,11 +122,15 @@ def render_pricing_page(
     plan_from_url = st.query_params.get("plan")
     if isinstance(plan_from_url, list):
         plan_from_url = plan_from_url[0] if plan_from_url else None
-    if plan_from_url in ("core", "pro", "coach"):
-        st.session_state["selected_paid_plan"] = plan_from_url
-        if st.session_state.get("last_plan_from_url") != plan_from_url:
-            st.session_state["force_plan_sku"] = plan_from_url
-            st.session_state["last_plan_from_url"] = plan_from_url
+    if plan_from_url in paid_plan_keys:
+        if plan_from_url in available_paid_plan_keys:
+            st.session_state["selected_paid_plan"] = plan_from_url
+            if st.session_state.get("last_plan_from_url") != plan_from_url:
+                st.session_state["force_plan_sku"] = plan_from_url
+                st.session_state["last_plan_from_url"] = plan_from_url
+        else:
+            st.session_state.pop("selected_paid_plan", None)
+            st.session_state.pop("buy_sku", None)
 
     plans_data = [
         ("free", "免费版", "¥0", "适合:先试试看,了解自己数据", "结果:看懂基础功率数据,不再只看平均速度", ["上传 FIT 文件,查看基础功率分析", "基础 PMC 训练负荷曲线", "最近训练概览", "AI 点评每月 8 次"]),
@@ -171,15 +181,36 @@ def render_pricing_page(
                 if plan_key == "free":
                     st.button("免费体验", key="choose_card_free", disabled=True, use_container_width=True)
                 else:
+                    plan_level = int(PLANS.get(plan_key, {}).get("level", 0) or 0)
+                    can_choose_plan = plan_level > current_level
                     btn_type = "primary" if st.session_state.get("selected_paid_plan") == plan_key else "secondary"
-                    if st.button(f"选择 {name}", key=f"choose_card_{plan_key}", type=btn_type, use_container_width=True):
+                    if st.button(f"选择 {name}" if can_choose_plan else ("当前套餐" if plan_key == current_plan else "不可降级/重复开通"), key=f"choose_card_{plan_key}", type=btn_type, use_container_width=True, disabled=not can_choose_plan):
                         st.session_state["selected_paid_plan"] = plan_key
                         st.session_state["buy_sku"] = (plan_key, "月付", PLANS[plan_key]["durations"]["月付"]["price"], PLANS[plan_key]["durations"]["月付"]["days"])
                         st.rerun()
     render_upgrade_note()
 
     st.subheader("开通 / 续费")
-    selected_plan_for_order = st.session_state.get("selected_paid_plan") if st.session_state.get("selected_paid_plan") in ("core", "pro", "coach") else "core"
+    selected_plan_for_order = st.session_state.get("selected_paid_plan") if st.session_state.get("selected_paid_plan") in available_paid_plan_keys else (available_paid_plan_keys[0] if available_paid_plan_keys else None)
+
+    if not selected_plan_for_order:
+        st.success(f"当前已经是 {PLANS.get(current_plan, PLANS['free'])['name']},无需再生成开通订单。")
+        st.caption("如需续费、企业/工作室定制或人工调整到期时间,请通过内测反馈联系管理员处理。")
+        orders = get_user_orders(user["user_id"])
+        if orders:
+            order_rows = []
+            for o in sorted(orders, key=lambda x: x.get("created_at", ""), reverse=True)[:8]:
+                order_rows.append({
+                    "订单号": o.get("order_id"),
+                    "套餐": o.get("plan_name"),
+                    "周期": o.get("duration_label"),
+                    "金额": o.get("amount"),
+                    "状态": o.get("status"),
+                    "创建时间": o.get("created_at", "")[:19],
+                    "开通后到期": o.get("expires_at_after_paid") or "-",
+                })
+            st.dataframe(order_rows, use_container_width=True, hide_index=True)
+        return
 
     sku_options = []
     for duration_label, duration in PLANS[selected_plan_for_order]["durations"].items():

@@ -469,7 +469,11 @@ def render_training_load_page(
     )
 
     st.subheader("PMC 曲线")
-    st.plotly_chart(plot_pmc(rides), use_container_width=True)
+    st.plotly_chart(
+        plot_pmc(rides),
+        use_container_width=True,
+        config={"scrollZoom": False, "displayModeBar": False},
+    )
     st.caption("蓝线=体能 CTL · 橙线=疲劳 ATL · 柱状=状态 TSB。TSB 不是越高越好,关键看是否匹配训练阶段。")
 
     with st.expander("查看训练记录明细", expanded=False):

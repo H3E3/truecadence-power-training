@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import xml.etree.ElementTree as ET
 
-from services.workout_export import workout_exports_for_item
+from services.workout_export import estimate_tss_from_blocks, workout_blocks_for_item, workout_exports_for_item
 from training_plan_rules import build_week_plan
 
 ftp = 250
@@ -18,11 +18,39 @@ for item in rows:
     if exp:
         exports.append(exp)
 
+# Regression: visible interval title must match exported blocks/TSS.
+sweet_12 = {"day": "周二", "kind": "sweet", "name": "甜区适应 3×12min", "detail": "0.90 IF", "dur_h": 1.2, "rest": False}
+sweet_15 = {"day": "周二", "kind": "sweet", "name": "甜区容量 3×15min", "detail": "0.90 IF", "dur_h": 1.5, "rest": False}
+blocks_12 = workout_blocks_for_item(sweet_12)
+blocks_15 = workout_blocks_for_item(sweet_15)
+assert sum(block[0] for block in blocks_12 if abs(block[1] - 0.90) < 1e-9) == 3 * 12 * 60, blocks_12
+assert sum(block[0] for block in blocks_15 if abs(block[1] - 0.90) < 1e-9) == 3 * 15 * 60, blocks_15
+assert estimate_tss_from_blocks(blocks_15) > estimate_tss_from_blocks(blocks_12), (blocks_12, blocks_15)
+
+# Regression: cadence-focused workouts should not export as featureless steady Z2.
+cadence_item = {"day": "周三", "kind": "z2", "name": "Z2 + 高踏频唤醒", "detail": "Z2 中加入 6×1min 高踏频", "dur_h": 1.0, "rest": False}
+cadence_exp = workout_exports_for_item(1, cadence_item, ftp)
+assert cadence_exp and 'Cadence="105"' in cadence_exp['zwo'][1], cadence_exp['zwo'][1]
+assert cadence_exp['zwo'][1].count('Cadence="105"') == 6, cadence_exp['zwo'][1]
+
+# Regression: Intervals.icu ERG importer needs duplicate transition points.
+erg_lines = cadence_exp['erg'][1].split('[COURSE DATA]', 1)[1].split('[END COURSE DATA]', 1)[0].strip().splitlines()
+assert len(erg_lines) >= 4, cadence_exp['erg'][1]
+assert erg_lines[-1] == erg_lines[-2], cadence_exp['erg'][1]
+
 assert exports, 'no exports generated'
 for exp in exports:
     zname, zxml = exp['zwo']
+    expected_prefix = f"TC_{exp['week']:02d}-"
+    assert zname.startswith(expected_prefix), zname
+    day_num = {'周一':1,'周二':2,'周三':3,'周四':4,'周五':5,'周六':6,'周日':7}[exp['day']]
+    assert f"TC_{exp['week']:02d}-{day_num:02d}_" in zname, zname
+    for fmt in ('zwo', 'erg', 'mrc'):
+        assert exp[fmt][0].startswith(f"TC_{exp['week']:02d}-{day_num:02d}_"), exp[fmt][0]
     root = ET.fromstring(zxml)
     assert root.tag == 'workout_file', zname
+    zwo_title = root.findtext('name') or ''
+    assert zwo_title.startswith(f"{exp['week']:02d}-{day_num:02d} {exp['day']} "), zwo_title
     workout = root.find('workout')
     assert workout is not None and len(list(workout)) > 0, zname
     for elem in workout:
@@ -32,9 +60,14 @@ for exp in exports:
             power = float(elem.attrib['Power'])
             assert dur >= 60, (zname, dur)
             assert 0.2 <= power <= 1.8, (zname, power)
+        if elem.tag == 'Warmup':
+            assert float(elem.attrib['PowerLow']) <= float(elem.attrib['PowerHigh']), (zname, elem.attrib)
+        if elem.tag == 'Cooldown':
+            assert float(elem.attrib['PowerLow']) >= float(elem.attrib['PowerHigh']), (zname, elem.attrib)
     for fmt in ('erg','mrc'):
         fname, content = exp[fmt]
         assert '[COURSE HEADER]' in content and '[COURSE DATA]' in content, fname
+        assert f"FILE NAME = {exp['week']:02d}-{day_num:02d} {exp['day']} " in content, fname
         data = content.split('[COURSE DATA]',1)[1].split('[END COURSE DATA]',1)[0].strip().splitlines()
         assert len(data) >= 2, fname
         minutes = []

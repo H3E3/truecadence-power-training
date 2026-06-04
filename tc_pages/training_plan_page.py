@@ -26,6 +26,7 @@ def render_training_plan_page(
     enrich_rides,
     data_scope_caption,
     load_profile,
+    save_rider_profile=None,
     estimate_ftp,
     estimate_best_powers,
     infer_cycle_status_for_date,
@@ -108,12 +109,18 @@ def render_training_plan_page(
     TRAINING_EXPERIENCE_OPTIONS = ["未填写", "新手", "普通骑行者", "有结构化训练经验", "有比赛经验"]
     DETRAINING_DURATION_OPTIONS = ["未填写", "无停训", "2-4周", "1-3月", "3月以上", "伤病后恢复"]
     PROGRESSION_OPTIONS = ["保守", "标准", "略进阶"]
+    PROGRESSION_EXPLAIN = {
+        "保守": "少加量、少冒险，适合恢复一般、刚回归或只想稳定完成。",
+        "标准": "按当前周时长和状态稳健推进。",
+        "略进阶": "不是直接把 TSS 拉到很高；只有数据、恢复和训练背景允许时，小幅增加容量/推进感。若想要 600+ TSS/周，需要把每周总时长调到相应范围，且安全门控不能触发降级。",
+    }
     EVENT_PRIORITY_OPTIONS = ["A", "B", "C"]
 
     plan_prefs = load_plan_prefs()
     day_order = ['周一','周二','周三','周四','周五','周六','周日']
     default_training_days = [d for d in plan_prefs.get("training_days", PLAN_PREF_DEFAULTS["training_days"]) if d in day_order] or PLAN_PREF_DEFAULTS["training_days"]
-    default_goal = plan_prefs.get("goal", PLAN_PREF_DEFAULTS["goal"])
+    profile_goal = profile.get("goal") if profile.get("goal") in PLAN_GOAL_OPTIONS else ""
+    default_goal = plan_prefs.get("goal") or profile_goal or PLAN_PREF_DEFAULTS["goal"]
     default_event_date = datetime.date.today() + datetime.timedelta(days=28)
     try:
         saved_event_date = datetime.date.fromisoformat(plan_prefs.get("event_date") or "")
@@ -159,7 +166,7 @@ def render_training_plan_page(
         with bg3:
             saved_progression = plan_prefs.get("progression_preference", PLAN_PREF_DEFAULTS["progression_preference"])
             progression_preference = st.selectbox("训练推进偏好", PROGRESSION_OPTIONS, index=PROGRESSION_OPTIONS.index(saved_progression) if saved_progression in PROGRESSION_OPTIONS else 1, key="plan_progression_preference_v1")
-        st.caption("阶段F不是更难模式。它只在恢复、疼痛、FTP可信度和比赛倒计时都允许时,根据训练背景小幅调整推进速度。")
+        st.caption("阶段F不是更难模式。" + PROGRESSION_EXPLAIN.get(progression_preference, "它只在恢复、疼痛、FTP可信度和比赛倒计时都允许时,根据训练背景小幅调整推进速度。"))
 
     with st.expander("🎯 比赛倒计时 / 专项设置（阶段D，可选）", expanded=False):
         ev1, ev2, ev3 = st.columns([1.2, 1.2, .8])
@@ -241,7 +248,16 @@ def render_training_plan_page(
     if prefs_changed:
         if st.button("保存当前课表设置", key="save_training_plan_prefs_v1", use_container_width=True):
             save_plan_prefs({**current_plan_prefs, "updated_at": datetime.datetime.now().isoformat(timespec="seconds")})
-            st.success("已保存当前课表设置。")
+            try:
+                profile_for_goal_sync = load_profile() or {}
+                profile_for_goal_sync["goal"] = goal
+                user_for_goal_sync = st.session_state.get("user")
+                rider_for_goal_sync = st.session_state.get("rider", "默认骑手")
+                if user_for_goal_sync and save_rider_profile:
+                    save_rider_profile(user_for_goal_sync["user_id"], rider_for_goal_sync, profile_for_goal_sync)
+            except Exception:
+                pass
+            st.success("已保存当前课表设置，训练目标已同步到骑手档案。")
             st.rerun()
 
     # ── dynamic readiness inputs: training load + feedback + sleep ──
@@ -545,6 +561,8 @@ def render_training_plan_page(
     **读法:**如果 TSB 偏低、ATL 明显高于 CTL、睡眠差、腿疲劳高或有疼痛/生病记录,课表会自动降级;如果状态较好,才会保留阈值、VO2、绕圈赛或爬坡专项质量课。
     """)
 
+    if progression_preference == "略进阶" and first['tss'] < 500:
+        st.markdown('<div class="plan-warning">ℹ️ 当前选择了“略进阶”，但本周 TSS 没有拉到高周量。原因通常是：每周总时长设置、近期 CTL/ATL/TSB、睡眠/疲劳/疼痛反馈、FTP 可信度或训练天数限制。TrueCadence 会优先保证可完成和可恢复；如果你本来就能稳定承受 600+ TSS/周，请把每周总时长调高，并确认详细排课依据里没有恢复/FTP/疼痛门控。</div>', unsafe_allow_html=True)
     if hours >= 16:
         st.markdown('<div class="plan-warning">⚠️ 你设置的周总量偏高。系统会优先保护强度课质量,并把额外时间放进 Z2 / 长距离;如果睡眠、腿疲劳或经期状态不好,建议下调 10-25%。</div>', unsafe_allow_html=True)
 

@@ -151,6 +151,7 @@ def render_data_import_page(
     download_intervals_activity_fit,
     parse_fit_files,
     ride_from_intervals_summary,
+    enrich_rides,
     load_historical,
     merge_rides,
     save_current_rides,
@@ -215,7 +216,8 @@ def render_data_import_page(
     oauth_token = get_token(user_id_oauth) if user_id_oauth else None
     oauth_connected = bool(oauth_token)
 
-    local_import_test_mode = os.environ.get("TRUECADENCE_DEPLOY_MODE", "local").lower() != "production"
+    deploy_mode = os.environ.get("TRUECADENCE_DEPLOY_MODE", "local").strip().lower()
+    local_import_test_mode = deploy_mode in ("", "local", "dev", "development", "test", "testing")
     if oauth_connected:
         st.success("✅ 已连接 Intervals.icu（OAuth 授权）")
         if st.button("断开 Intervals.icu 连接", key="intervals_oauth_disconnect", use_container_width=True):

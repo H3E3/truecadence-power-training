@@ -6,6 +6,26 @@ import json
 import pandas as pd
 import streamlit as st
 
+
+
+PROFILE_GOAL_OPTIONS = [
+    "恢复体能 / 重建基础",
+    "减脂减重 / 燃脂骑",
+    "提升 FTP / 功体比",
+    "备战绕圈赛",
+    "备战爬坡赛",
+    "备战个人计时赛",
+    "备战长距离耐力赛",
+    "备战公路赛",
+    "赛前减量 / 巅峰",
+    "维持现状 / 休闲骑",
+]
+
+
+def normalize_profile_goal(value):
+    value = str(value or "").strip()
+    return value if value in PROFILE_GOAL_OPTIONS else PROFILE_GOAL_OPTIONS[0]
+
 from ui_components import (
     render_danger_note,
     render_profile_help,
@@ -154,6 +174,8 @@ def render_rider_profile_page(
     plan_info,
     hr_zones_by_max,
     hr_zones_by_lthr,
+    load_plan_prefs=None,
+    save_plan_prefs=None,
 ):
     st.title("👤 骑手档案")
 
@@ -161,68 +183,73 @@ def render_rider_profile_page(
 
     profile = load_profile()
 
-    tab0, tab1, tab2 = st.tabs(["骑手管理", "基础档案", "Fitting 设定"])
+    is_coach_plan = int(plan_info.get("level", 0) or 0) >= 3
+    if is_coach_plan:
+        tab0, tab1, tab2 = st.tabs(["骑手管理", "基础档案", "Fitting 设定"])
+    else:
+        tab1, tab2 = st.tabs(["基础档案", "Fitting 设定"])
 
-    with tab0:
-        user = st.session_state.get("user", {})
-        riders = list(user.get("riders", {}).keys())
-        active_rider = st.session_state.get("rider", riders[0] if riders else "默认骑手")
-        try:
-            history_count = len(load_rider_rides(user.get("user_id"), active_rider)) if user else 0
-        except Exception:
-            history_count = 0
+    if is_coach_plan:
+        with tab0:
+            user = st.session_state.get("user", {})
+            riders = list(user.get("riders", {}).keys())
+            active_rider = st.session_state.get("rider", riders[0] if riders else "默认骑手")
+            try:
+                history_count = len(load_rider_rides(user.get("user_id"), active_rider)) if user else 0
+            except Exception:
+                history_count = 0
 
-        render_profile_section_title("当前骑手")
-        c0a, c0b, c0c = st.columns(3)
-        c0a.metric("当前骑手", active_rider)
-        c0b.metric("骑手数量", f"{len(riders)}/{plan_info['riders']}")
-        c0c.metric("训练存档", f"{history_count} 条")
+            render_profile_section_title("当前骑手")
+            c0a, c0b, c0c = st.columns(3)
+            c0a.metric("当前骑手", active_rider)
+            c0b.metric("骑手数量", f"{len(riders)}/{plan_info['riders']}")
+            c0c.metric("训练存档", f"{history_count} 条")
 
-        if len(riders) > 1:
-            selected_profile_rider = st.selectbox("切换当前骑手", riders, index=riders.index(active_rider) if active_rider in riders else 0, key="profile_rider_select")
-            if selected_profile_rider != st.session_state.get("rider"):
-                st.session_state.rider = selected_profile_rider
-                st.cache_data.clear()
-                st.rerun()
-        else:
-            st.info("当前只有一个骑手档案。Coach 版可管理多个骑手。")
-
-        render_profile_section_title("添加骑手")
-        add_col, add_btn_col = st.columns([2, 1], vertical_alignment="bottom")
-        new_name = add_col.text_input("新骑手名称", placeholder="例如:客户007 / 张三 / 默认骑手2", key="profile_new_rider_name")
-        if add_btn_col.button("添加骑手", key="profile_add_rider_btn", use_container_width=True):
-            if new_name.strip():
-                ok, msg = add_rider(user["user_id"], new_name.strip())
-                if ok:
-                    users = load_users()
-                    st.session_state.user = {"user_id": user["user_id"], **users[user["user_id"]]}
-                    st.success(msg)
+            if len(riders) > 1:
+                selected_profile_rider = st.selectbox("切换当前骑手", riders, index=riders.index(active_rider) if active_rider in riders else 0, key="profile_rider_select")
+                if selected_profile_rider != st.session_state.get("rider"):
+                    st.session_state.rider = selected_profile_rider
+                    st.cache_data.clear()
                     st.rerun()
-                else:
-                    st.error(msg)
             else:
-                st.error("请输入骑手名称")
+                st.info("当前只有一个骑手档案。Coach 版可管理多个骑手。")
 
-        if len(riders) > 1:
-            render_profile_section_title("删除骑手")
-            st.caption("只能删除非当前骑手。删除前请确认该骑手的数据不再需要。")
-            del_options = [r for r in riders if r != active_rider]
-            del_col, del_btn_col = st.columns([2, 1], vertical_alignment="bottom")
-            del_name = del_col.selectbox("选择要删除的骑手", ["-- 选择 --"] + del_options, key="profile_del_rider")
-            if del_btn_col.button("删除", key="profile_del_rider_btn", use_container_width=True):
-                if del_name != "-- 选择 --":
-                    ok, msg = delete_rider(user["user_id"], del_name)
+            render_profile_section_title("添加骑手")
+            add_col, add_btn_col = st.columns([2, 1], vertical_alignment="bottom")
+            new_name = add_col.text_input("新骑手名称", placeholder="例如:客户007 / 张三 / 默认骑手2", key="profile_new_rider_name")
+            if add_btn_col.button("添加骑手", key="profile_add_rider_btn", use_container_width=True):
+                if new_name.strip():
+                    ok, msg = add_rider(user["user_id"], new_name.strip())
                     if ok:
                         users = load_users()
                         st.session_state.user = {"user_id": user["user_id"], **users[user["user_id"]]}
-                        st.session_state.rider = users[user["user_id"]].get("active_rider", riders[0])
                         st.success(msg)
-                        st.cache_data.clear()
                         st.rerun()
                     else:
                         st.error(msg)
                 else:
-                    st.error("请选择要删除的骑手")
+                    st.error("请输入骑手名称")
+
+            if len(riders) > 1:
+                render_profile_section_title("删除骑手")
+                st.caption("只能删除非当前骑手。删除前请确认该骑手的数据不再需要。")
+                del_options = [r for r in riders if r != active_rider]
+                del_col, del_btn_col = st.columns([2, 1], vertical_alignment="bottom")
+                del_name = del_col.selectbox("选择要删除的骑手", ["-- 选择 --"] + del_options, key="profile_del_rider")
+                if del_btn_col.button("删除", key="profile_del_rider_btn", use_container_width=True):
+                    if del_name != "-- 选择 --":
+                        ok, msg = delete_rider(user["user_id"], del_name)
+                        if ok:
+                            users = load_users()
+                            st.session_state.user = {"user_id": user["user_id"], **users[user["user_id"]]}
+                            st.session_state.rider = users[user["user_id"]].get("active_rider", riders[0])
+                            st.success(msg)
+                            st.cache_data.clear()
+                            st.rerun()
+                        else:
+                            st.error(msg)
+                    else:
+                        st.error("请选择要删除的骑手")
 
     with tab1:
         render_profile_section_title("身体数据")
@@ -275,8 +302,9 @@ def render_rider_profile_page(
             st.info("填写最大心率或乳酸阈值心率后,会在这里显示心率区间。")
 
         render_profile_section_title("目标信息")
-        render_profile_help("训练目标越清楚,AI 建议和课表方向越容易对准。")
-        goal = st.text_input("训练目标", value=profile.get('goal') or '', placeholder="例如:提升 FTP、备战绕圈赛、减脂、恢复体能")
+        render_profile_help("训练目标越清楚,AI 建议和课表方向越容易对准。这里和「生成课表」使用同一套目标选项。")
+        saved_goal = normalize_profile_goal(profile.get('goal'))
+        goal = st.selectbox("训练目标", PROFILE_GOAL_OPTIONS, index=PROFILE_GOAL_OPTIONS.index(saved_goal), key="profile_goal_select_v1")
         notes = st.text_area("备注", value=profile.get('notes') or '', placeholder="可记录伤病、可训练时间、比赛日期、器材情况等")
 
         save_col, clear_col = st.columns([3, 1])
@@ -295,10 +323,15 @@ def render_rider_profile_page(
             existing.update(basics)
             if user:
                 save_rider_profile(user["user_id"], rider, existing)
+                if load_plan_prefs and save_plan_prefs:
+                    plan_prefs = load_plan_prefs()
+                    plan_prefs["goal"] = goal
+                    plan_prefs["updated_at"] = datetime.datetime.now().isoformat(timespec="seconds")
+                    save_plan_prefs(plan_prefs)
             else:
                 with open(PROFILE_FILE, 'w', encoding='utf-8') as f:
                     json.dump(existing, f, ensure_ascii=False, indent=2)
-            st.success("✅ 骑手档案已保存")
+            st.success("✅ 骑手档案已保存，训练目标已同步到生成课表")
         if clear_col.button("清空", use_container_width=True, help="仅清空当前骑手的基础档案"):
             user = st.session_state.get("user")
             rider = st.session_state.get("rider", "默认骑手")

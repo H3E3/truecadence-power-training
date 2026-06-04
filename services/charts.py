@@ -44,11 +44,46 @@ def plot_pmc(rides, compute_daily_pmc_func):
     fig.add_trace(go.Bar(x=df['date'], y=df['tsb'], name='状态TSB', hovertemplate=hovertpl, marker_color='#45B7D1', opacity=0.7, showlegend=True), secondary_y=True)
 
     fig.update_layout(
-        height=400, margin=dict(l=30, r=30, t=30, b=30),
+        height=460,
+        margin=dict(l=8, r=8, t=12, b=20),
         template="plotly_dark",
         hovermode='x unified',
-        hoverlabel=dict(font_size=16, font_family="Arial"),
+        hoverlabel=dict(font_size=14, font_family="Arial"),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=11),
+            itemwidth=30,
+        ),
+        bargap=0.08,
+        dragmode=False,
     )
-    fig.update_yaxes(title_text="CTL / ATL", secondary_y=False)
-    fig.update_yaxes(title_text="TSB", secondary_y=True)
+    fig.update_xaxes(
+        tickformat="%m-%d",
+        nticks=5,
+        showgrid=False,
+        automargin=True,
+        fixedrange=True,
+    )
+    fig.update_yaxes(
+        title_text="",
+        secondary_y=False,
+        tickfont=dict(size=10),
+        automargin=False,
+        rangemode="tozero",
+        fixedrange=True,
+    )
+    fig.update_yaxes(
+        title_text="",
+        secondary_y=True,
+        tickfont=dict(size=10),
+        automargin=False,
+        showgrid=False,
+        zeroline=True,
+        zerolinecolor="rgba(255,255,255,0.25)",
+        fixedrange=True,
+    )
     return fig
