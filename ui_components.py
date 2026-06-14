@@ -77,6 +77,25 @@ def data_scope_caption(rides, historical, uploaded_rides, source_label):
     return f"当前分析:{len(rides)} 条骑行记录|{source_label}|本次上传 {len(uploaded_rides)} 条|历史存档 {len(historical)} 条"
 
 
+
+
+def render_v2_page_hero(kicker: str, title: str, text: str):
+    st.markdown(f"""
+<div class="tc-v2-hero">
+  <div class="tc-v2-kicker">{kicker}</div>
+  <div class="tc-v2-title">{title}</div>
+  <div class="tc-v2-sub">{text}</div>
+</div>
+""", unsafe_allow_html=True)
+
+
+def render_v2_decision_grid(cards):
+    html=[]
+    for idx, (label, title, text, hot) in enumerate(cards, 1):
+        cls='tc-v2-card hot' if hot else 'tc-v2-card'
+        html.append(f'<div class="{cls}"><div class="idx">{label or f"MODULE {idx:02d}"}</div><div class="title">{title}</div><div class="text">{text}</div></div>')
+    st.markdown('<div class="tc-v2-grid">' + ''.join(html) + '</div>', unsafe_allow_html=True)
+
 def select_ride_scope(load_historical_func, merge_rides_func, toggle_label="合并全历史数据", key=None, help_text=None, recommended=False):
     """Shared ride-scope selector for pages that compare history vs current upload.
 
@@ -223,149 +242,46 @@ def render_upgrade_note():
 def render_upload_intro():
     st.markdown("""
 <style>
-.upload-hero {
-    padding: 1.25em 1.1em;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(255,107,53,0.12), rgba(22,27,34,0.92));
-    border: 1px solid rgba(255,107,53,0.22);
-    margin-bottom: 1em;
+.tc-v2-hero,.upload-hero {
+    position:relative; overflow:hidden; padding:1.85rem 2rem 1.7rem; border-radius:26px;
+    background:radial-gradient(circle at 82% 14%, rgba(240,111,50,.16), transparent 30%),linear-gradient(180deg,rgba(21,16,12,.92),rgba(9,11,15,.98));
+    border:1.4px solid var(--tc-module-border-hot); box-shadow:0 18px 42px rgba(0,0,0,.34); margin:.35rem 0 1rem;
 }
-.upload-hero-title {
-    color: #f0f6fc;
-    font-size: 1.18em;
-    font-weight: 720;
-    margin-bottom: 0.35em;
-}
-.upload-hero-text {
-    color: #aab6c3;
-    font-size: 0.92em;
-    line-height: 1.65;
-}
-.upload-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.8em;
-    margin: 0.9em 0 1.1em;
-}
-.upload-card {
-    background: var(--tc-surface);
-    border: 1px solid var(--tc-surface-2);
-    border-radius: 12px;
-    padding: 0.95em;
-    min-height: 112px;
-}
-.upload-card .title {
-    color: #f0f6fc;
-    font-weight: 700;
-    margin-bottom: 0.35em;
-}
-.upload-card .text {
-    color: var(--tc-subtle);
-    font-size: 0.84em;
-    line-height: 1.55;
-}
-.upload-next {
-    background: rgba(35,134,54,0.08);
-    border: 1px solid rgba(35,134,54,0.28);
-    border-radius: 12px;
-    padding: 0.95em 1em;
-    margin-top: 0.9em;
-}
-.upload-next .title {
-    color: #7ee787;
-    font-weight: 720;
-    margin-bottom: 0.35em;
-}
-.upload-next .text {
-    color: var(--tc-muted);
-    font-size: 0.9em;
-    line-height: 1.7;
-}
-/* Make Streamlit file uploader look like the primary action on this page. */
-[data-testid="stFileUploader"] {
-    margin: 1.0em 0 1.1em;
-    padding: 1.05em 1.08em;
-    border-radius: 18px;
-    border: 1.5px dashed rgba(255,107,53,0.66);
-    background:
-        radial-gradient(circle at 18% 10%, rgba(255,255,255,0.10), transparent 30%),
-        linear-gradient(135deg, rgba(255,107,53,0.20), rgba(22,27,34,0.97));
-    box-shadow: 0 0 28px rgba(255,107,53,0.13), inset 0 0 16px rgba(255,107,53,0.05);
-}
-[data-testid="stFileUploader"] label,
-[data-testid="stFileUploader"] label p {
-    color: #f0f6fc !important;
-    font-size: 1.08rem !important;
-    font-weight: 850 !important;
-}
-[data-testid="stFileUploader"] section {
-    border-color: rgba(255,107,53,0.42) !important;
-    background: rgba(255,255,255,0.035) !important;
-    border-radius: 14px !important;
-}
-[data-testid="stFileUploader"] button {
-    background: linear-gradient(135deg, #ff7a3d, #ff5a1f) !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(255,255,255,0.22) !important;
-    border-radius: 999px !important;
-    font-weight: 850 !important;
-    box-shadow: 0 0 16px rgba(255,107,53,0.42) !important;
-}
-.upload-cta-note {
-    margin: 0.9em 0 -0.25em;
-    padding: 0.9em 1em;
-    border-radius: 14px;
-    background: rgba(255,107,53,0.10);
-    border: 1px solid rgba(255,107,53,0.26);
-    color: #d8dee9;
-    line-height: 1.65;
-    font-size: 0.92em;
-}
-.upload-cta-note b { color:#ffb088; }
-@media (max-width: 900px) {
-    .upload-grid { grid-template-columns: 1fr; }
-}
+.tc-v2-hero:after{content:"";position:absolute;right:2rem;top:4.8rem;width:34%;height:2px;background:linear-gradient(90deg,transparent,rgba(240,111,50,.7),transparent);opacity:.78}
+
+.tc-v2-kicker,.upload-hero-kicker{display:inline-flex;align-items:center;height:2rem;padding:0 .86rem;border-radius:999px;border:1px solid rgba(240,111,50,.72);background:rgba(240,111,50,.12);color:#f06f32;font-size:.78rem;font-weight:780;letter-spacing:.045em;margin-bottom:1rem}
+.tc-v2-title,.upload-hero-title{color:#f4f0ea;font-size:2.35rem;line-height:1.1;font-weight:830;letter-spacing:-.04em;margin:0 0 .62rem;max-width:820px}.tc-v2-sub,.upload-hero-text{color:#a7a19a;font-size:1rem;line-height:1.75;max-width:820px}
+.tc-v2-grid,.upload-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem;margin:1rem 0 1.1rem}.tc-v2-card,.upload-card{position:relative;background:linear-gradient(180deg,rgba(21,16,12,.78),rgba(9,11,15,.98));border:1.2px solid #211b16;border-radius:22px;padding:1.12rem;min-height:142px}.tc-v2-card .idx{color:#5c3524;font-family:'SF Mono','JetBrains Mono',monospace;font-size:.74rem;font-weight:780;letter-spacing:.08em;margin-bottom:.7rem}.tc-v2-card .title,.upload-card .title{color:#f4f0ea;font-size:1.08rem;font-weight:800;margin-bottom:.42rem}.tc-v2-card .text,.upload-card .text{color:#a7a19a;font-size:.9rem;line-height:1.62}
+.tc-v2-next,.upload-next{background:linear-gradient(180deg,rgba(31,18,12,.92),rgba(13,10,8,.98));border:1.4px solid #4a2b1c;border-radius:22px;padding:1.15rem 1.25rem;margin:1rem 0}.tc-v2-next .title,.upload-next .title{color:#f4f0ea;font-size:1.16rem;font-weight:820;margin-bottom:.38rem}.tc-v2-next .text,.upload-next .text{color:#a7a19a;line-height:1.7;font-size:.94rem}.tc-v2-next b,.upload-next b{color:#f06f32}
+.upload-cta-note{margin:.9em 0 -.25em;padding:.9em 1em;border-radius:16px;background:rgba(240,111,50,.10);border:1px solid rgba(240,111,50,.32);color:#d8c7bb;line-height:1.65;font-size:.92em}.upload-cta-note b{color:#f06f32}
+[data-testid="stFileUploader"]{margin:1em 0 1.1em;padding:1.1em;border-radius:22px;border:1.5px dashed rgba(240,111,50,.66);background:radial-gradient(circle at 18% 10%,rgba(255,255,255,.08),transparent 30%),linear-gradient(135deg,rgba(240,111,50,.18),rgba(9,11,15,.97));box-shadow:0 0 28px rgba(240,111,50,.13),inset 0 0 16px rgba(240,111,50,.05)}[data-testid="stFileUploader"] label,[data-testid="stFileUploader"] label p{color:#f4f0ea!important;font-size:1.08rem!important;font-weight:850!important}[data-testid="stFileUploader"] section{border-color:rgba(240,111,50,.42)!important;background:rgba(255,255,255,.035)!important;border-radius:16px!important}[data-testid="stFileUploader"] button{background:#f06f32!important;color:#11151b!important;border:1px solid #f06f32!important;border-radius:16px!important;font-weight:850!important;box-shadow:0 0 16px rgba(240,111,50,.34)!important}
+.upload-diagnosis{position:relative;overflow:hidden;border:1.4px solid #4a2b1c;border-radius:26px;padding:1.35rem 1.45rem;margin:1.05rem 0 1.1rem;background:linear-gradient(180deg,rgba(31,18,12,.92),rgba(13,10,8,.98));box-shadow:0 16px 34px rgba(0,0,0,.32)}.upload-diagnosis:after{content:"";position:absolute;right:1.4rem;top:3.2rem;width:260px;height:2px;background:linear-gradient(90deg,transparent,rgba(240,111,50,.72),transparent)}.upload-diagnosis .eyebrow{color:#f06f32;font-size:.76em;font-weight:850;letter-spacing:.12em;margin-bottom:.62em}.upload-diagnosis .title{color:#f4f0ea;font-size:2rem;line-height:1.15;font-weight:840;letter-spacing:-.03em;margin-bottom:.5rem}.upload-diagnosis .status{color:#f4f0ea;font-size:1.12rem;font-weight:820;margin:.42em 0}.upload-diagnosis .body{color:#a7a19a;font-size:.92em;line-height:1.78}.upload-diagnosis b{color:#f06f32}
+@media(max-width:980px){.tc-v2-grid,.upload-grid{grid-template-columns:1fr}.tc-v2-title,.upload-hero-title{font-size:2rem}}
 </style>
 <div class="upload-hero">
-    <div class="upload-hero-title">第一步:把你的真实骑行数据放进来</div>
-    <div class="upload-hero-text">
-        建议一次上传最近 4-12 周的 FIT 文件。数据越完整,FTP 估算、功率曲线、疲劳抗性和后续 AI 诊断会越稳定。
-        如果只有 1-3 次骑行,也可以先上传体验基础分析。
-    </div>
+  <div class="upload-hero-kicker">上传与诊断 · 先结论后图表</div>
+  <div class="upload-hero-title">上传 FIT 后，先看这次骑行说明了什么。</div>
+  <div class="upload-hero-text">新手不需要先理解所有曲线。TrueCadence 会先给一句话诊断、关键发现、主要短板和下一步建议；专业数据放在后面展开。</div>
 </div>
 <div class="upload-grid">
-    <div class="upload-card">
-        <div class="title">⚡ 功率数据</div>
-        <div class="text">用于计算 FTP、功率持续曲线、冲刺能力、20min/60min 能力和疲劳抗性。</div>
-    </div>
-    <div class="upload-card">
-        <div class="title">❤️ 心率数据</div>
-        <div class="text">用于辅助判断强度反应、恢复压力和训练负荷是否合理。</div>
-    </div>
-    <div class="upload-card">
-        <div class="title">📈 训练负荷</div>
-        <div class="text">用于生成 TSS、PMC、周训练量趋势,并为训练课表提供依据。</div>
-    </div>
+  <div class="upload-card"><div class="idx">DIAGNOSIS 01</div><div class="title">一句话诊断</div><div class="text">先告诉你当前能力和训练节奏的大方向，而不是先展示表格。</div></div>
+  <div class="upload-card"><div class="idx">DIAGNOSIS 02</div><div class="title">关键发现</div><div class="text">把 FTP、负荷、疲劳抗性翻译成能执行的训练判断。</div></div>
+  <div class="upload-card"><div class="idx">DIAGNOSIS 03</div><div class="title">下一步建议</div><div class="text">上传后直接衔接本周计划、恢复判断和专业数据。</div></div>
 </div>
 """, unsafe_allow_html=True)
 
 
 def render_upload_cta_note():
     st.markdown("""
-<div class="upload-cta-note">
-    <b>👇 从这里开始:</b>点击下方按钮选择 FIT 文件,或直接把 FIT 文件拖到上传框里。一次最多 28 个,单次总大小最多 50MB;网络不稳定或使用代理时,建议每批 5-10 个 FIT,更稳。
-</div>
+<div class="upload-cta-note"><b>👇 从这里开始:</b>选择或拖拽 FIT 文件。一次最多 28 个、单次总大小最多 50MB；网络不稳定时每批 5-10 个更稳。</div>
 """, unsafe_allow_html=True)
 
 
 def render_upload_next_steps(new_ride_count: int):
     st.markdown(f"""
 <div class="upload-next">
-    <div class="title">下一步建议</div>
-    <div class="text">
-        这 {new_ride_count} 条新解析数据已经并入历史。建议先看 <b>📊 功率仪表盘</b> 理解当前能力结构,
-        再进入 <b>🧠 AI 功率分析</b> 获取训练判断;如果你已解锁 Core,可继续生成 <b>📋 训练课表</b>。
-    </div>
+  <div class="title">下一步建议</div>
+  <div class="text">这 <b>{new_ride_count}</b> 条新解析数据已经并入历史。建议先生成/查看 <b>本周训练计划</b>，再按需要展开功率画像、PMC 和 AI 详细诊断。</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -388,45 +304,28 @@ def render_upload_quick_diagnosis_card(
     traits: list[str],
     suggestions: list[str],
 ):
+    main_short = traits[0] if traits else "先补充更多 FIT，让判断更稳定。"
+    next_short = suggestions[0] if suggestions else "先完成骑手档案，再生成本周训练计划。"
     st.markdown(f"""
-<style>
-.upload-diagnosis {{
-    border: 1px solid rgba(255,107,53,0.34);
-    border-radius: 18px;
-    padding: 1.05em 1.15em;
-    margin: 1.0em 0 1.15em;
-    background: linear-gradient(135deg, rgba(255,107,53,0.16), rgba(22,27,34,0.96));
-    box-shadow: 0 0 24px rgba(255,107,53,0.08);
-}}
-.upload-diagnosis .eyebrow {{ color:#ff9a68; font-size:0.76em; font-weight:850; letter-spacing:0.12em; margin-bottom:0.35em; }}
-.upload-diagnosis .title {{ color:#f0f6fc; font-size:1.24em; font-weight:840; margin-bottom:0.45em; }}
-.upload-diagnosis .status {{ color:{state_color}; font-size:1.02em; font-weight:800; margin:0.35em 0; }}
-.upload-diagnosis .body {{ color:#aab6c3; font-size:0.90em; line-height:1.72; }}
-.upload-diagnosis b {{ color:#ffb088; }}
-</style>
 <div class="upload-diagnosis">
-  <div class="eyebrow">TRUECADENCE QUICK READ</div>
-  <div class="title">上传后初步诊断</div>
-  <div class="status">当前状态:{state}</div>
-  <div class="body">
-    数据范围:<b>{range_text}</b>|记录:<b>{ride_count} 条</b>|FTP:<b>{ftp}W</b>({ftp_source})|功体比:<b>{wkg} W/kg</b><br>
-    训练负荷:CTL <b>{ctl if ctl is not None else '-'}</b> / ATL <b>{atl if atl is not None else '-'}</b> / TSB <b>{tsb if tsb is not None else '-'}</b>|近7天 TSS <b>{round(recent7_tss)}</b>|近28天 TSS <b>{round(recent28_tss)}</b><br>
-    {state_desc}
-  </div>
+  <div class="eyebrow">DIAGNOSIS</div>
+  <div class="title">一句话诊断</div>
+  <div class="status" style="color:{state_color};">{state}</div>
+  <div class="body">{state_desc}<br>数据范围：<b>{range_text}</b> · 记录 <b>{ride_count}</b> 条 · FTP <b>{ftp}W</b>（{ftp_source}）· 功体比 <b>{wkg} W/kg</b></div>
+</div>
+<div class="tc-v2-grid">
+  <div class="tc-v2-card"><div class="idx">01</div><div class="title">主要短板</div><div class="text">{main_short}</div></div>
+  <div class="tc-v2-card"><div class="idx">02</div><div class="title">下一步建议</div><div class="text">{next_short}</div></div>
+  <div class="tc-v2-card"><div class="idx">03</div><div class="title">数据可信度</div><div class="text">CTL {ctl if ctl is not None else '-'} / ATL {atl if atl is not None else '-'} / TSB {tsb if tsb is not None else '-'}；近 7 天 {round(recent7_tss)} TSS，近 28 天 {round(recent28_tss)} TSS。</div></div>
 </div>
 """, unsafe_allow_html=True)
-
-    c1, c2 = st.columns(2)
-    with c1:
+    with st.expander("为什么这样判断", expanded=False):
         st.markdown("**能力特点**")
         for t in traits[:4]:
             st.markdown(f"- {t}")
-    with c2:
         st.markdown("**下一步建议**")
         for sug in suggestions[:5]:
             st.markdown(f"- {sug}")
-
-
 def render_profile_intro():
     st.markdown("""
 <style>
@@ -1290,7 +1189,7 @@ def render_plan_source_scope(select_scope_func, merge_rides_func):
 def render_plan_builder_styles():
     st.markdown("""
 <style>
-.plan-hero{padding:1.1em 1.15em;border-radius:16px;background:linear-gradient(135deg,rgba(255,107,53,.16),rgba(22,27,34,.96));border:1px solid rgba(255,107,53,.28);margin:.6em 0 1em}.plan-kicker{color:#ff9a68;font-size:.78em;font-weight:800;letter-spacing:.08em}.plan-title{color:#f0f6fc;font-size:1.45em;font-weight:850;margin:.25em 0}.plan-sub{color:#aab6c3;font-size:.9em;line-height:1.6}.plan-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7em;margin:.8em 0 1em}.plan-card{background:var(--tc-surface);border:1px solid var(--tc-border);border-radius:13px;padding:.85em;min-height:5.6em}.plan-card .k{color:var(--tc-subtle);font-size:.72em}.plan-card .v{color:#f0f6fc;font-size:1.08em;font-weight:800;margin:.18em 0}.plan-card .d{color:var(--tc-subtle);font-size:.75em;line-height:1.35}.plan-day{background:var(--tc-surface);border:1px solid var(--tc-border);border-radius:10px;padding:.68em .66em;min-height:12em;margin:.15em 0}.plan-day .dow{color:var(--tc-subtle);font-size:.68em;font-weight:800}.plan-day .name{color:#f0f6fc;font-size:.82em;font-weight:800;margin-top:.28em;line-height:1.25}.plan-day .detail{color:var(--tc-subtle);font-size:.68em;margin-top:.35em;line-height:1.35;min-height:2.4em}.plan-pill{display:inline-block;background:var(--tc-surface-2);border-radius:5px;padding:.12em .42em;margin:.15em .16em .05em 0;font-size:.62em}.plan-warning{padding:.85em 1em;border-radius:12px;background:rgba(240,192,64,.1);border:1px solid rgba(240,192,64,.28);color:#d8c58a;font-size:.86em;line-height:1.55}@media(max-width:1050px){.plan-grid{grid-template-columns:1fr 1fr}}@media(max-width:720px){.plan-grid{grid-template-columns:1fr}}
+.plan-hero{position:relative;overflow:hidden;padding:1.85rem 2rem 1.7rem;border-radius:26px;background:radial-gradient(circle at 82% 14%,rgba(240,111,50,.16),transparent 30%),linear-gradient(180deg,rgba(21,16,12,.92),rgba(9,11,15,.98));border:1.4px solid var(--tc-module-border-hot);box-shadow:0 18px 42px rgba(0,0,0,.34);margin:.35rem 0 1rem}.plan-hero:after{content:"";position:absolute;right:2rem;top:4.8rem;width:34%;height:2px;background:linear-gradient(90deg,transparent,rgba(240,111,50,.7),transparent);opacity:.78}.plan-hero svg{position:absolute;right:2.2rem;top:4.15rem;width:320px;height:80px;opacity:.72}.plan-hero path{stroke:#f06f32;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 8px rgba(240,111,50,.52))}.plan-kicker{display:inline-flex;align-items:center;height:2rem;padding:0 .86rem;border-radius:999px;border:1px solid rgba(240,111,50,.72);background:rgba(240,111,50,.12);color:#f06f32;font-size:.78rem;font-weight:780;letter-spacing:.045em;margin-bottom:1rem}.plan-title{color:#f4f0ea;font-size:2.45rem;line-height:1.1;font-weight:830;letter-spacing:-.04em;margin:0 0 .62rem;max-width:850px}.plan-sub{color:#a7a19a;font-size:1rem;line-height:1.75;max-width:850px}.plan-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.9rem;margin:1rem 0}.plan-card{position:relative;background:linear-gradient(180deg,rgba(21,16,12,.78),rgba(9,11,15,.98));border:1.2px solid #211b16;border-radius:22px;padding:1.05rem;min-height:9.3rem}.plan-card .k{color:#f06f32;font-family:'SF Mono','JetBrains Mono',monospace;font-size:.72em;font-weight:800;letter-spacing:.08em}.plan-card .v{color:#f4f0ea;font-size:1.22em;font-weight:830;margin:.42em 0;line-height:1.18}.plan-card .d{color:#a7a19a;font-size:.86em;line-height:1.5}.plan-brief{border:1.4px solid #4a2b1c;border-radius:26px;padding:1.28rem 1.35rem;margin:1rem 0;background:linear-gradient(180deg,rgba(31,18,12,.92),rgba(13,10,8,.98));box-shadow:0 16px 34px rgba(0,0,0,.32)}.plan-brief .eyebrow{color:#f06f32;font-size:.76em;font-weight:850;letter-spacing:.12em;margin-bottom:.58em}.plan-brief .title{color:#f4f0ea;font-size:1.85rem;line-height:1.14;font-weight:840;letter-spacing:-.03em;margin-bottom:.45rem}.plan-brief .body{color:#a7a19a;font-size:.94em;line-height:1.75}.plan-session-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem;margin:1rem 0 1.1rem}.plan-session{background:linear-gradient(180deg,rgba(21,16,12,.84),rgba(9,11,15,.98));border:1.2px solid #211b16;border-radius:22px;padding:1rem;min-height:12rem}.plan-session .code{color:#5c3524;font-family:'SF Mono','JetBrains Mono',monospace;font-size:.72rem;font-weight:800;letter-spacing:.08em;margin-bottom:.7rem}.plan-session .dow{color:#f06f32;font-size:.78rem;font-weight:850;letter-spacing:.04em}.plan-session .name{color:#f4f0ea;font-size:1.12rem;font-weight:830;line-height:1.22;margin:.38rem 0}.plan-session .detail{color:#a7a19a;font-size:.88rem;line-height:1.58;min-height:3.8rem}.plan-day{background:linear-gradient(180deg,rgba(21,16,12,.74),rgba(9,11,15,.98));border:1px solid #211b16;border-radius:18px;padding:.82em .74em;min-height:12em;margin:.15em 0}.plan-day .dow{color:#f06f32;font-size:.68em;font-weight:800}.plan-day .name{color:#f4f0ea;font-size:.82em;font-weight:800;margin-top:.28em;line-height:1.25}.plan-day .detail{color:#a7a19a;font-size:.68em;margin-top:.35em;line-height:1.35;min-height:2.4em}.plan-pill{display:inline-block;background:#15100c;border:1px solid #2a1f19;border-radius:8px;padding:.12em .42em;margin:.15em .16em .05em 0;font-size:.62em}.plan-warning{padding:.85em 1em;border-radius:14px;background:rgba(245,184,75,.1);border:1px solid rgba(245,184,75,.28);color:#d8c58a;font-size:.86em;line-height:1.55}@media(max-width:1050px){.plan-grid,.plan-session-grid{grid-template-columns:1fr 1fr}}@media(max-width:720px){.plan-grid,.plan-session-grid{grid-template-columns:1fr}.plan-title{font-size:2rem}.plan-hero svg{display:none}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1298,9 +1197,10 @@ def render_plan_builder_styles():
 def render_plan_builder_intro():
     st.markdown("""
 <div class="plan-hero">
-  <div class="plan-kicker">TRAINING PLAN BUILDER</div>
-  <div class="plan-title">先判断这周该怎么练,再生成可执行课表</div>
-  <div class="plan-sub">根据 FIT 推算 FTP / 功体比,并结合训练负荷、睡眠/反馈、目标、可训练天数和周总量,动态生成本周重点、周期递进和 Zwift .ZWO 文件。</div>
+  <div class="plan-kicker">训练计划 · 第二版尖峰动效</div>
+  <svg viewBox="0 0 360 88" aria-hidden="true"><path d="M0 44 H138 L168 44 L184 18 L210 78 L232 44 H360"/></svg>
+  <div class="plan-title">计划要像训练简报，不像后台排班表。</div>
+  <div class="plan-sub">先告诉你本周重点、为什么这样排、今天怎么执行；训练文件、TSS、阶段规则和专业负荷细节放到后面展开。</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1308,13 +1208,12 @@ def render_plan_builder_intro():
 def render_plan_summary_cards(pm, ftp, wkg, weight, first, key_text, load_note):
     st.markdown(f"""
 <div class="plan-grid">
-  <div class="plan-card"><div class="k">当前阶段</div><div class="v">{pm['icon']} {pm['name']}</div><div class="d">{pm['desc']}</div></div>
-  <div class="plan-card"><div class="k">功率基础</div><div class="v">FTP {ftp}W</div><div class="d">{wkg} W/kg · {weight}kg</div></div>
-  <div class="plan-card"><div class="k">本周主题</div><div class="v" style="font-size:.96em;">{first['theme']}</div><div class="d">{first['theme_desc']}</div></div>
-  <div class="plan-card"><div class="k">关键训练</div><div class="v" style="font-size:.96em;">{key_text}</div><div class="d">{load_note}</div></div>
+  <div class="plan-card"><div class="k">WEEK FOCUS</div><div class="v">{first['theme']}</div><div class="d">{first['theme_desc']}</div></div>
+  <div class="plan-card"><div class="k">CURRENT PHASE</div><div class="v">{pm['icon']} {pm['name']}</div><div class="d">{pm['desc']}</div></div>
+  <div class="plan-card"><div class="k">POWER BASE</div><div class="v">FTP {ftp}W</div><div class="d">{wkg} W/kg · {weight}kg</div></div>
+  <div class="plan-card"><div class="k">KEY SESSION</div><div class="v">{key_text}</div><div class="d">{load_note}</div></div>
 </div>
 """, unsafe_allow_html=True)
-
 
 
 def render_goal_phase_path(phase_rows):

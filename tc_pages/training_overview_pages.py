@@ -4,9 +4,12 @@ import datetime
 
 import pandas as pd
 import streamlit as st
+from tc_pages.v2.router import render_v2_page
 
 from ui_components import (
     render_empty_data_state,
+    render_v2_decision_grid,
+    render_v2_page_hero,
     render_power_dashboard_top_metrics,
     render_power_ftp_reference,
     render_power_profile_and_durability,
@@ -41,9 +44,6 @@ def render_power_dashboard_page(
     data_scope_caption,
     POWER_PROFILE_MIN_PEER_SAMPLES,
 ):
-    st.title("📊 功率仪表盘")
-    st.caption("功率曲线、区间、疲劳抗性一览")
-
     uploaded_rides, historical, use_all, rides, source_label = select_ride_scope(
         "合并全历史数据",
         key="power_use_all",
@@ -89,18 +89,27 @@ def render_power_dashboard_page(
         "manual_ftp" if actual_ftp > 0 else "estimated_ftp",
     )
 
-    render_power_ftp_reference(actual_ftp, est_ftp, ftp, pweight, ftp_detail, best)
+    five_s = best.get('5s') or best.get(5) or best.get("5") or "-"
+    one_min = best.get('1min') or best.get(60) or best.get("60") or "-"
+    five_min = best.get('5min') or best.get(300) or best.get("300") or "-"
+    twenty_min = best.get('20min') or best.get(1200) or best.get("1200") or "-"
+    long_power = best.get('60min') or best.get(3600) or best.get("3600") or best.get('40min') or best.get(2400) or best.get("2400") or "-"
+    render_v2_decision_grid([
+        ("PROFILE", "能力结论", "先看能力结构：短时能不能顶、20min 能不能撑、40–60min 掉不掉。真实功率曲线已在下方显示。", True),
+        ("5s / 1min", f"{five_s}W / {one_min}W", "短爆发和短坡能力。能说明冲刺、突围、跟加速，但不能直接代表 FTP。", False),
+        ("5min", f"{five_min}W", "VO2 / 高强支撑。决定 3–6 分钟爬坡、追击，以及能不能反复吃高强度。", False),
+        ("20min", f"{twenty_min}W", "阈值 / FTP 支撑窗口。它比短时峰值更能体现长坡、巡航和持续输出能力。", True),
+    ])
 
-    # Top metrics - uniform cards
-    render_power_dashboard_top_metrics(ftp, pweight, best, len(rides))
-
-    # Power curve
-    st.subheader("功率持续时间曲线")
-    st.plotly_chart(plot_power_curve(best, ftp), use_container_width=True)
+    st.subheader("功率曲线 · 真实 FIT 数据")
+    with st.expander("FTP 与曲线参考", expanded=True):
+        render_power_ftp_reference(actual_ftp, est_ftp, ftp, pweight, ftp_detail, best)
+        render_power_dashboard_top_metrics(ftp, pweight, best, len(rides))
+        st.plotly_chart(plot_power_curve(best, ftp), use_container_width=True)
 
     # Power zones table
     if ftp:
-        st.subheader("🏷️ 功率区间 - 练什么功率代表练什么能力")
+        st.subheader("功率区间 · 专业详情")
         profile_hr_method = profile.get('hr_zone_method', '按最大心率')
         lthr = profile.get('lthr', 0) or 0
         max_hr = profile.get('max_hr', 0) or 0

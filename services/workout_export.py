@@ -32,7 +32,10 @@ def _steady(sec, frac, cadence=None):
     cadence_attr = ""
     if cadence:
         cadence_attr = f' Cadence="{int(cadence)}"'
-    return f'    <SteadyState Duration="{max(60,int(sec))}" Power="{frac:.3f}"{cadence_attr}/>'
+    # Short on/off efforts such as 30s threshold alternates and 15s VO2 spikes
+    # must remain short in ZWO. Forcing every SteadyState to >=60s silently
+    # deletes the training promise when paired with zwo_segments_from_blocks.
+    return f'    <SteadyState Duration="{max(1,int(sec))}" Power="{frac:.3f}"{cadence_attr}/>'
 
 
 def _ramp(sec, low, high):
@@ -182,7 +185,7 @@ def zwo_segments_from_blocks(blocks):
         out = [_ramp(first_sec, min(first_p, .50), max(first_p, .55))]
         for block in middle:
             sec, frac, cadence = _block_sec_power_cadence(block)
-            if sec >= 60:
+            if sec >= 1:
                 out.append(_steady(sec, frac, cadence))
         prev_p = _block_sec_power_cadence(middle[-1])[1] if middle else first_p
         out.append(_cooldown(last_sec, min(max(prev_p, last_p), 1.20), min(last_p, .50)))

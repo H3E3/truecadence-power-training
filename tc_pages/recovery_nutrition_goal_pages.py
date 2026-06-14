@@ -8,9 +8,12 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+from tc_pages.v2.router import render_v2_page
 
 from ui_components import (
     render_empty_data_state,
+    render_v2_decision_grid,
+    render_v2_page_hero,
     render_goal_action_and_risk,
     render_goal_phase_path,
     render_goal_reassessment_notes,
@@ -48,10 +51,8 @@ def render_recovery_sleep_page(
     build_recovery_advice,
 ):
     require_plan(2, "🛌 恢复与睡眠")
-    st.title("🛌 恢复与睡眠")
-    st.caption("把训练负荷和主观反馈合在一起,判断今天该正常训练、降强度、恢复骑,还是完全休息。")
-
-    render_recovery_intro()
+    render_v2_page("recovery")
+    st.stop()
 
     uploaded_rides, historical, use_all, rides, source_label = select_ride_scope(
         "合并全历史数据",
@@ -100,28 +101,23 @@ def render_recovery_sleep_page(
     reasons = recovery_advice['reasons']
     stale_notes = recovery_advice['stale_notes']
 
-    render_recovery_advice_summary(
-        advice_class,
-        advice_tag,
-        advice_main,
-        reasons,
-        tsb,
-        ctl,
-        atl,
-        weekly_h,
-        feedback_summary.get('count', 0),
-        watch_sleep_hours,
-        watch_sleep_score,
-        watch_hrv,
-        avg_nap_min,
-        nap_refresh_count,
-        nap_sluggish_count,
-    )
+    render_v2_decision_grid([
+        ("TODAY", advice_tag, advice_main, True),
+        ("DO", next_action, "如果 20 分钟后仍腿沉，直接收工；今天优先保留低强度活动。", False),
+        ("DON'T", "别硬顶阈值 / VO2", "不是怕强度，是今天的收益风险比不高。", False),
+        ("EVIDENCE", f"CTL {ctl} / ATL {atl} / TSB {tsb}", "训练负荷、睡眠和主观反馈共同决定今天是否降级。", True),
+    ])
 
-    render_recovery_action_and_feedback(next_action, stale_notes, ftp, nap_records, feedback_summary, pain_counts, special_counts, cycle_counts, bool(feedback))
+    with st.expander("恢复依据与详细反馈", expanded=False):
+        render_recovery_advice_summary(
+            advice_class, advice_tag, advice_main, reasons, tsb, ctl, atl, weekly_h,
+            feedback_summary.get('count', 0), watch_sleep_hours, watch_sleep_score, watch_hrv,
+            avg_nap_min, nap_refresh_count, nap_sluggish_count,
+        )
+        render_recovery_action_and_feedback(next_action, stale_notes, ftp, nap_records, feedback_summary, pain_counts, special_counts, cycle_counts, bool(feedback))
 
     st.divider()
-    st.subheader("⌚ 手表睡眠数据")
+    st.subheader("记录今日恢复反馈")
     st.caption("先用手动录入打通字段;后续佳明/Apple/华为/COROS 的截图 OCR、CSV 或 API 都落到这套数据里。")
 
     latest_sleep = sorted(sleep_records, key=lambda x: x.get("date", ""), reverse=True)[0] if sleep_records else {}

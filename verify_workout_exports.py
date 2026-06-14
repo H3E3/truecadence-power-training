@@ -33,6 +33,19 @@ cadence_exp = workout_exports_for_item(1, cadence_item, ftp)
 assert cadence_exp and 'Cadence="105"' in cadence_exp['zwo'][1], cadence_exp['zwo'][1]
 assert cadence_exp['zwo'][1].count('Cadence="105"') == 6, cadence_exp['zwo'][1]
 
+# Regression: threshold alternates promised as 30s@120% FTP must survive ZWO export.
+lt_alt_item = {
+    "day": "周二",
+    "kind": "threshold",
+    "name": "阈值交替 2×20min",
+    "detail": "20min内每2min插入30s@264W,其余回到202-220W;练乳酸清除。",
+    "dur_h": 1.7,
+    "rest": False,
+}
+lt_alt_exp = workout_exports_for_item(3, lt_alt_item, 220)
+assert lt_alt_exp and 'Duration="30" Power="1.200"' in lt_alt_exp['zwo'][1], lt_alt_exp['zwo'][1]
+assert lt_alt_exp['zwo'][1].count('Duration="30" Power="1.200"') == 20, lt_alt_exp['zwo'][1]
+
 # Regression: Intervals.icu ERG importer needs duplicate transition points.
 erg_lines = cadence_exp['erg'][1].split('[COURSE DATA]', 1)[1].split('[END COURSE DATA]', 1)[0].strip().splitlines()
 assert len(erg_lines) >= 4, cadence_exp['erg'][1]
@@ -58,7 +71,7 @@ for exp in exports:
         if elem.tag == 'SteadyState':
             dur = int(float(elem.attrib['Duration']))
             power = float(elem.attrib['Power'])
-            assert dur >= 60, (zname, dur)
+            assert dur >= 1, (zname, dur)
             assert 0.2 <= power <= 1.8, (zname, power)
         if elem.tag == 'Warmup':
             assert float(elem.attrib['PowerLow']) <= float(elem.attrib['PowerHigh']), (zname, elem.attrib)

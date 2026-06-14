@@ -171,6 +171,7 @@ from tc_pages.static_pages import (
     render_home_page,
     render_privacy_page,
 )
+from tc_pages.v2.router import render_v2_page
 from rules.recovery import (
     build_recovery_advice,
     summarize_diagnosis_sleep_recovery,
@@ -272,17 +273,22 @@ st.markdown("""
 <style>
 
 :root {
-    --tc-bg:#0d1117; --tc-bg-soft:#111827; --tc-surface:#161b22; --tc-surface-2:#21262d;
-    --tc-card:#161b22; --tc-card-2:#1b2430; --tc-border:#30363d;
-    --tc-text:#e6edf3; --tc-muted:#c9d1d9; --tc-subtle:#8b949e;
-    --tc-shadow:rgba(0,0,0,.28); --tc-accent:#ff7a12; --tc-accent-soft:rgba(255,107,53,.12);
+    --tc-bg:#060709; --tc-bg-soft:#080a0d; --tc-surface:#090b0f; --tc-surface-2:#15100c;
+    --tc-card:#090b0f; --tc-card-2:#0d1219; --tc-border:#3a2a22;
+    --tc-text:#f4f0ea; --tc-muted:#a7a19a; --tc-subtle:#67645f;
+    --tc-shadow:rgba(0,0,0,.34); --tc-accent:#f06f32; --tc-accent-soft:rgba(240,111,50,.12);
+    --tc-module-border:#3a2a22; --tc-module-border-hot:#4a2b1c; --tc-panel-warm:#15100c;
 }
 /* Base typography */
 html, body, [class*="css"] {
     font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 html, body, .stApp, [data-testid="stAppViewContainer"] {
-    background: var(--tc-bg) !important;
+    background:
+        linear-gradient(160deg, rgba(240,111,50,.045), transparent 24%),
+        linear-gradient(110deg, transparent 0 68%, rgba(240,111,50,.035) 68.2%, transparent 68.7%),
+        linear-gradient(110deg, transparent 0 73%, rgba(255,255,255,.022) 73.1%, transparent 73.45%),
+        var(--tc-bg) !important;
     color: var(--tc-text) !important;
 }
 [data-testid="stHeader"] {
@@ -290,9 +296,11 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
 }
 .block-container {
     background: transparent !important;
+    max-width: 1480px !important;
+    padding-top: 2.1rem !important;
 }
-h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.02em; }
-h1 { font-size: 2em !important; }
+h1, h2, h3, h4 { font-weight: 760; letter-spacing: -0.025em; color:var(--tc-text) !important; }
+h1 { font-size: 2.25em !important; }
 h2 { font-size: 1.4em !important; color: var(--tc-text) !important; }
 h3 { font-size: 1.15em !important; color: var(--tc-muted) !important; }
 
@@ -305,11 +313,11 @@ table td, table th {
 
 /* Cards: wrap metrics and dataframes */
 [data-testid="stMetric"] {
-    background: var(--tc-surface);
-    border: 1px solid var(--tc-surface-2);
-    border-radius: 10px;
-    padding: 1em !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    background: linear-gradient(180deg, rgba(21,16,12,.92), var(--tc-surface));
+    border: 1.4px solid var(--tc-module-border);
+    border-radius: 18px;
+    padding: 1.05em !important;
+    box-shadow: 0 14px 28px rgba(0,0,0,0.28);
     min-height: 7.2rem;
     height: 100%;
     display: flex;
@@ -349,8 +357,9 @@ table td, table th {
 .tc-mini-metric-card {
     background: var(--tc-surface);
     border: 1px solid var(--tc-surface-2);
-    border-radius: 10px;
+    border-radius: 18px;
     padding: 1rem;
+    border:1.4px solid var(--tc-module-border);
     min-height: 7.4rem;
     height: 7.4rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -419,17 +428,62 @@ table td, table th {
 
 /* Buttons */
 .stButton > button {
-    background: linear-gradient(135deg, #ff6b35 0%, #e85d2c 100%) !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.02em;
-    transition: all 0.2s;
+    background: #f06f32 !important;
+    color: #11151b !important;
+    border: 1px solid #f06f32 !important;
+    border-radius: 16px !important;
+    font-weight: 780 !important;
+    letter-spacing: 0.01em;
+    min-height: 2.65rem;
+    transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
 }
 .stButton > button:hover {
-    box-shadow: 0 0 16px rgba(255,107,53,0.3);
+    box-shadow: 0 0 18px rgba(240,111,50,0.32);
     transform: translateY(-1px);
+    filter:brightness(1.04);
+}
+.stButton > button[kind="secondary"], .stDownloadButton > button, [data-testid="baseButton-secondary"] {
+    background:#0d1219 !important;
+    color:#f4f0ea !important;
+    border:1px solid #253244 !important;
+    border-radius:16px !important;
+    font-weight:760 !important;
+    min-height:2.65rem;
+}
+.stDownloadButton > button:hover, [data-testid="baseButton-secondary"]:hover {
+    border-color:#f06f32 !important;
+    box-shadow:0 0 14px rgba(240,111,50,.20) !important;
+}
+[data-testid="stExpander"] {
+    background:linear-gradient(180deg,rgba(13,18,25,.72),rgba(8,10,13,.98)) !important;
+    border:1.2px solid #211b16 !important;
+    border-radius:20px !important;
+    overflow:hidden;
+    margin:.85rem 0 !important;
+}
+[data-testid="stExpander"] summary {
+    color:#f4f0ea !important;
+    font-weight:800 !important;
+    letter-spacing:-.01em;
+}
+[data-baseweb="select"] > div, [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input, textarea {
+    background:#090b0f !important;
+    color:#f4f0ea !important;
+    border-color:#2a211b !important;
+    border-radius:14px !important;
+}
+[data-testid="stTabs"] button {
+    color:#a7a19a !important;
+    border-radius:14px 14px 0 0 !important;
+}
+[data-testid="stTabs"] button[aria-selected="true"] {
+    color:#f4f0ea !important;
+    border-bottom-color:#f06f32 !important;
+}
+[data-testid="stDataFrame"] {
+    border:1px solid #211b16 !important;
+    border-radius:18px !important;
+    overflow:hidden;
 }
 
 /* Expander / tabs */
@@ -463,9 +517,9 @@ table td, table th {
 /* Sidebar / TrueCadence navigation */
 [data-testid="stSidebar"] {
     background:
-        radial-gradient(circle at 14% 8%, rgba(255,122,18,.12), transparent 30%),
-        linear-gradient(180deg, #0b0f16 0%, #0d1117 46%, #090c11 100%) !important;
-    border-right: 1px solid rgba(255,122,18,.13);
+        radial-gradient(circle at 30% 5%, rgba(240,111,50,.16), transparent 26%),
+        linear-gradient(180deg, #080a0d 0%, #060709 58%, #050607 100%) !important;
+    border-right: 1px solid rgba(240,111,50,.18);
 }
 [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
     padding-top: 0 !important;
@@ -499,7 +553,7 @@ table td, table th {
     min-height:1.85rem;
     height:1.85rem;
     padding:0 .72rem;
-    border-radius:14px;
+    border-radius:16px;
     border:1px solid transparent;
     background:transparent;
     transition:transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
@@ -511,8 +565,9 @@ table td, table th {
 }
 .tc-nav-card.active {
     border-color:rgba(255,122,18,.36);
-    background:linear-gradient(90deg, rgba(255,122,18,.24), rgba(255,122,18,.065) 62%, rgba(255,255,255,.012));
-    box-shadow:inset 2px 0 0 #ff7a12, 0 10px 24px rgba(255,107,53,.12);
+    background:#15100c;
+    border-color:#322016;
+    box-shadow:inset 3px 0 0 #f06f32, 0 10px 24px rgba(240,111,50,.12);
 }
 .tc-nav-card.active.solo {
     border-color:transparent;
@@ -528,7 +583,7 @@ table td, table th {
     line-height:1.15;
     text-align:center;
 }
-.tc-nav-card.active .tc-nav-title { color:#fff2e8; }
+.tc-nav-card.active .tc-nav-title { color:#f4f0ea; }
 .tc-nav-card .tc-nav-desc {
     display:none;
 }
@@ -684,6 +739,23 @@ hr {
     object-fit: contain;
     vertical-align: middle;
 }
+
+.tc-module {
+    background: linear-gradient(180deg, rgba(21,16,12,.86), rgba(9,11,15,.98));
+    border: 1.4px solid var(--tc-module-border);
+    border-radius: 22px;
+    padding: 1.05rem 1.1rem;
+    box-shadow: 0 14px 30px rgba(0,0,0,.28);
+}
+.tc-module.hot { background: linear-gradient(180deg, rgba(31,18,12,.92), rgba(13,10,8,.98)); border-color: var(--tc-module-border-hot); }
+.tc-pill {
+    display:inline-flex; align-items:center; min-height:1.75rem; padding:0 .78rem;
+    border-radius:999px; border:1px solid rgba(240,111,50,.72); background:rgba(240,111,50,.12);
+    color:#f06f32; font-size:.76rem; font-weight:760; letter-spacing:.04em; margin-bottom:.82rem;
+}
+.tc-brief-title { color:var(--tc-text); font-size:1.8rem; font-weight:800; letter-spacing:-.025em; line-height:1.18; margin:.15rem 0 .4rem; }
+.tc-brief-sub { color:var(--tc-muted); font-size:.98rem; line-height:1.72; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1260,19 +1332,22 @@ st.sidebar.markdown("""
 <style>
 .tc-side-brand-wrap {
     text-align:center;
-    padding:0 0.35em 0.62em;
-    margin-top:-2.05rem;
-    margin-bottom:0.34em;
+    padding:0 0.35em 0.72em;
+    margin-top:-1.15rem;
+    margin-bottom:0.58em;
     background:transparent;
-    border-bottom:1px solid rgba(255,122,18,.13);
+    border-bottom:1px solid rgba(240,111,50,.18);
     pointer-events:none;
 }
 .tc-side-brand-wrap img { pointer-events:none; }
 .tc-side-symbol {
     position: relative;
+    display:inline-block;
+    vertical-align:middle;
+    top: 10px;
     width: 76px;
     height: 46px;
-    margin: 0 auto 0.18em;
+    margin: 0 0.34em 0 0;
     border-radius: 14px;
     overflow: visible;
     filter: drop-shadow(0 0 6px rgba(255,107,53,0.72)) drop-shadow(0 0 18px rgba(255,107,53,0.32)) drop-shadow(0 0 30px rgba(255,107,53,0.16));
@@ -1282,7 +1357,7 @@ st.sidebar.markdown("""
 .tc-side-shine-word {
     display: inline-block;
     font-family: 'Aptos Display', 'Segoe UI Variable Display', 'Inter', system-ui, sans-serif;
-    font-size: 1.42em;
+    font-size: 1.54em;
     letter-spacing: 0.055em;
     font-weight: 520;
     line-height: 0.95;
@@ -1322,32 +1397,25 @@ st.sidebar.markdown("""
 .tc-side-shine-word span:nth-child(10)::after { animation-delay: 0.90s; }
 .tc-side-shine-word span:nth-child(11)::after { animation-delay: 1.00s; }
 @keyframes tcSideLogoPulse {
-    0%, 100% {
-        transform: translateY(0) scaleY(0.92);
-        filter: brightness(1) drop-shadow(0 0 6px rgba(255,107,53,0.72)) drop-shadow(0 0 18px rgba(255,107,53,0.32)) drop-shadow(0 0 30px rgba(255,107,53,0.16));
-    }
-    45% {
-        transform: translateY(-3.2px) scaleY(1.03);
-        filter: brightness(1.18) drop-shadow(0 0 8px rgba(255,255,255,0.34)) drop-shadow(0 0 16px rgba(255,206,170,0.46)) drop-shadow(0 0 26px rgba(255,107,53,0.34));
-    }
-    62% {
-        transform: translateY(1.2px) scaleY(0.89);
-        filter: brightness(0.98) drop-shadow(0 0 6px rgba(255,107,53,0.72)) drop-shadow(0 0 18px rgba(255,107,53,0.32)) drop-shadow(0 0 30px rgba(255,107,53,0.16));
-    }
+    0%, 100% { filter: brightness(1) drop-shadow(0 0 6px rgba(255,107,53,0.56)) drop-shadow(0 0 16px rgba(255,107,53,0.24)); }
+    45% { filter: brightness(1.13) drop-shadow(0 0 8px rgba(255,255,255,0.24)) drop-shadow(0 0 18px rgba(255,107,53,0.34)); }
+    62% { filter: brightness(1.02) drop-shadow(0 0 6px rgba(255,107,53,0.52)) drop-shadow(0 0 15px rgba(255,107,53,0.22)); }
 }
 @keyframes tcSideLetterPulse { 0%, 100% { transform: translateY(0) scaleY(0.92); filter: brightness(1); } 45% { transform: translateY(-3.2px) scaleY(1.03); filter: brightness(1.18); } 62% { transform: translateY(1.2px) scaleY(0.89); filter: brightness(0.98); } }
 @keyframes tcSideLetterSweep { 0%, 8% { opacity:0; } 10%, 15% { opacity:0.92; } 19%, 100% { opacity:0; } }
 .tc-side-slogan {
-    margin-top:0.38em;
-    font-size:0.68em;
-    letter-spacing:0.17em;
+    position:relative;
+    left:28px;
+    margin-top:0.56em;
+    font-size:0.78em;
+    letter-spacing:0.105em;
     color:#d8c7bb;
     text-shadow:0 0 5px rgba(255,122,18,0.66), 0 0 13px rgba(255,107,53,0.40), 0 0 24px rgba(255,107,53,0.18);
     filter: drop-shadow(0 0 6px rgba(255,107,53,0.26));
 }
 </style>
 <div class="tc-side-brand-wrap">
-    <div class="tc-side-symbol"><img src=""" + side_logo_uri + """ alt="TrueCadence symbol" /></div>
+    <div class="tc-side-symbol"><img src=""" + side_logo_uri + """ alt="" /></div>
     <div class="tc-side-shine-word"><span data-letter="T">T</span><span data-letter="r">r</span><span data-letter="u">u</span><span data-letter="e">e</span><span data-letter="C">C</span><span data-letter="a">a</span><span data-letter="d">d</span><span data-letter="e">e</span><span data-letter="n">n</span><span data-letter="c">c</span><span data-letter="e">e</span></div>
     <div class="tc-side-slogan">慢下来 · 成为自己的节奏</div>
 </div>
@@ -1357,17 +1425,19 @@ _nav_user = st.session_state.get("user", {}) or {}
 is_admin_user = is_admin_account(_nav_user)
 
 nav_groups = {
-    "首页": {"desc": "", "pages": [("功能说明", "🏠 功能说明")]},
-    "我的档案": {"desc": "身体、目标、骑手", "pages": [("骑手档案", "👤 骑手档案"), ("目标追踪", "🎯 目标追踪")]},
-    "导入数据": {"desc": "FIT 与平台数据", "pages": [("FIT 上传", "📤 上传分析"), ("平台导入", "🔗 数据导入")]},
-    "AI 分析": {"desc": "核心诊断", "pages": [("AI 分析", "🧠 AI 功率分析")]},
-    "我的分析": {"desc": "能力、恢复", "pages": [("功率仪表盘", "📊 功率仪表盘"), ("恢复睡眠", "🛌 恢复与睡眠"), ("营养补给", "🍝 营养与补给")]},
-    "训练建议": {"desc": "负荷、反馈", "pages": [("训练负荷", "📈 训练负荷"), ("训练反馈", "📝 训练反馈")]}, 
-    "数据与支持": {"desc": "隐私、反馈、版本", "pages": [("数据隐私", "🔐 数据隐私"), ("内测反馈", "🐞 内测反馈"), ("套餐对比", "💎 套餐对比"), ("更新日志", "📌 更新日志")]},
-    "English / Review": {"desc": "Platform review", "pages": [("Review", "🌐 English / Review")]},
+    "骑手档案": {"desc": "基础资料", "pages": [("骑手资料", "👤 骑手档案")]},
+    "训练驾驶舱": {"desc": "今天怎么练", "pages": [("首页简报", "🏠 功能说明"), ("训练负荷", "📈 训练负荷")]},
+    "上传与诊断": {"desc": "先看结论", "pages": [("上传 FIT", "📤 上传分析"), ("平台导入", "🔗 数据导入"), ("AI 诊断", "🧠 AI 功率分析")]},
+    "训练计划": {"desc": "怎么执行", "pages": [("训练课表", "📋 训练课表")]},
+    "训练反馈": {"desc": "练后回填", "pages": [("训练反馈", "📝 训练反馈")]},
+    "状态与恢复": {"desc": "今天能不能练", "pages": [("恢复睡眠", "🛌 恢复与睡眠"), ("营养补给", "🍝 营养与补给"), ("目标追踪", "🎯 目标追踪")]},
+    "专业数据": {"desc": "依据与曲线", "pages": [("功率画像", "📊 功率仪表盘"), ("AI 诊断", "🧠 AI 功率分析")]},
+    "更多": {"desc": "支持与设置", "pages": [("数据隐私", "🔐 数据隐私"), ("内测反馈", "🐞 内测反馈"), ("套餐对比", "💎 套餐对比"), ("更新日志", "📌 更新日志"), ("Review", "🌐 English / Review")]},
+    "帮助 · 隐私 · 更新": {"desc": "支持与说明", "pages": [("首页", "帮助 · 隐私 · 更新"), ("反馈", "问题反馈"), ("隐私", "隐私与数据说明"), ("FIT说明", "FIT / ICU 接入说明"), ("updates", "查看版本更新")]},
+
 }
 if is_admin_user:
-    nav_groups["管理后台"] = {"desc": "订单与反馈", "pages": [("管理后台", "🛠️ 管理后台")]}
+    nav_groups["管理"] = {"desc": "订单与反馈", "pages": [("管理后台", "🛠️ 管理后台")]}
 
 query_nav = st.query_params.get("nav")
 query_page = st.query_params.get("sub")
@@ -1375,8 +1445,21 @@ if isinstance(query_nav, list):
     query_nav = query_nav[0] if query_nav else None
 if isinstance(query_page, list):
     query_page = query_page[0] if query_page else None
+legacy_nav_map = {
+    "首页": "训练驾驶舱",
+    "我的档案": "骑手档案",
+    "导入数据": "上传与诊断",
+    "AI 分析": "上传与诊断",
+    "我的分析": "专业数据",
+    "训练建议": "训练计划",
+    "数据与支持": "更多",
+    "English / Review": "更多",
+    "管理后台": "管理",
+}
+if query_nav in legacy_nav_map:
+    query_nav = legacy_nav_map[query_nav]
 if query_nav not in nav_groups:
-    query_nav = "首页"
+    query_nav = "训练驾驶舱"
 section_names = list(nav_groups.keys())
 nav_section = query_nav
 sub_pages = nav_groups[nav_section]["pages"]
@@ -1392,8 +1475,228 @@ def _set_nav(target_nav, target_sub=None):
     elif "sub" in st.query_params:
         del st.query_params["sub"]
 
-st.sidebar.markdown('<div class="tc-nav-kicker">Flow</div>', unsafe_allow_html=True)
-plan_for_nav = PLANS.get(st.session_state.get("user", {}).get("plan", "free"), PLANS["free"]).get("level", 0)
+# V2 primary pages should render before legacy Streamlit sidebar/widgets are built.
+# Otherwise browser refresh briefly shows the old UI and can feel like it jumped back.
+v2_primary_routes = {
+    "骑手档案": "profile",
+    "上传与诊断": "upload",
+    "专业数据": "power",
+    "训练驾驶舱": "dashboard",
+    "训练计划": "plan",
+    "状态与恢复": "recovery",
+    "帮助 · 隐私 · 更新": "help",
+}
+_v2_action = st.query_params.get("action")
+if isinstance(_v2_action, list):
+    _v2_action = _v2_action[0] if _v2_action else None
+_v2_plan_save_action = st.query_params.get("plan_action")
+if isinstance(_v2_plan_save_action, list):
+    _v2_plan_save_action = _v2_plan_save_action[0] if _v2_plan_save_action else None
+def _tc_query_values(name):
+    if hasattr(st.query_params, "get_all"):
+        values = st.query_params.get_all(name)
+    else:
+        value = st.query_params.get(name)
+        values = value if isinstance(value, list) else ([value] if value is not None else [])
+    out = []
+    for item in values:
+        out.extend([part for part in str(item).split(",") if part])
+    return out
+
+if nav_section == "帮助 · 隐私 · 更新" and _v2_action == "save-v2-beta-feedback":
+    _tc_user = st.session_state.get("user") or {}
+    _tc_rider = st.session_state.get("rider") or "默认骑手"
+    _tc_feedback_item = {
+        "created_at": datetime.datetime.now().isoformat(timespec="seconds"),
+        "user_id": _tc_user.get("user_id", ""),
+        "username": _tc_user.get("username", ""),
+        "plan": _tc_user.get("plan", "free"),
+        "rider": _tc_rider,
+        "contact": str(st.query_params.get("contact") or "").strip(),
+        "page": str(st.query_params.get("feedback_page") or "其他"),
+        "type": str(st.query_params.get("issue_type") or "其他"),
+        "severity": str(st.query_params.get("severity") or "一般建议"),
+        "description": str(st.query_params.get("description") or "").strip(),
+        "steps": str(st.query_params.get("steps") or "").strip(),
+        "expected": str(st.query_params.get("expected") or "").strip(),
+        "favorite_feature": "",
+        "disliked_feature": str(st.query_params.get("quick_answers") or "").strip(),
+        "paid_feature": "",
+        "allow_contact": True,
+        "source": "v2_help_feedback",
+    }
+    if any(_tc_feedback_item.get(k) for k in ("description", "steps", "expected", "disliked_feature")):
+        _tc_file = DATA_DIR / "beta_feedback.json"
+        _tc_items = load_beta_feedback_from_file(_tc_file)
+        _tc_items.insert(0, _tc_feedback_item)
+        save_beta_feedback_to_file(_tc_items, _tc_file)
+        st.query_params.clear()
+        st.query_params["nav"] = "帮助 · 隐私 · 更新"
+        st.query_params["sub"] = "反馈"
+        st.query_params["saved"] = "v2-beta-feedback"
+        st.rerun()
+
+if nav_section == "状态与恢复" and _v2_action == "save-v2-feedback":
+    from services.feedback_store import load_feedback_for_rider as _tc_load_feedback_for_rider, save_feedback_for_rider as _tc_save_feedback_for_rider
+    _tc_user = st.session_state.get("user") or {}
+    _tc_rider = st.session_state.get("rider") or "默认骑手"
+    if _tc_user:
+        def _tc_int_param(name, default):
+            try:
+                return int(st.query_params.get(name) or default)
+            except Exception:
+                return default
+        _tc_date = str(st.query_params.get("date") or datetime.date.today().isoformat())
+        _tc_entry = {
+            "date": _tc_date,
+            "sleep_quality": _tc_int_param("sleep_quality", 3),
+            "energy": _tc_int_param("energy", 3),
+            "leg_fatigue": _tc_int_param("leg_fatigue", 3),
+            "stress": 3,
+            "morning_hr": 0,
+            "rpe": _tc_int_param("rpe", 5),
+            "completion": str(st.query_params.get("completion") or "正常完成"),
+            "leg_feel": str(st.query_params.get("leg_feel") or "正常"),
+            "breathing": "正常",
+            "fueling": str(st.query_params.get("fueling") or "正常"),
+            "pains": _tc_query_values("pains"),
+            "specials": _tc_query_values("specials"),
+            "notes": str(st.query_params.get("notes") or ""),
+            "cycle_status": "不记录",
+            "cycle_pain": "无",
+            "cycle_flow": "不记录",
+            "cycle_mood": "不记录",
+            "cycle_training_impact": "不记录",
+            "created_at": datetime.datetime.now().isoformat(timespec="seconds"),
+        }
+        _tc_feedback = _tc_load_feedback_for_rider(_tc_user, _tc_rider, get_rider_data_path, get_user_dir, trim_rides_to_recent_weeks)
+        _tc_feedback = [x for x in _tc_feedback if x.get("date") != _tc_entry["date"]]
+        _tc_feedback.append(_tc_entry)
+        _tc_feedback.sort(key=lambda x: (x.get("date", ""), x.get("created_at", "")), reverse=True)
+        _tc_save_feedback_for_rider(_tc_feedback, _tc_user, _tc_rider, save_rider_data)
+        try:
+            from services.feedback_impact import build_feedback_impact_notice as _tc_build_feedback_impact_notice
+            from services.training_calendar import week_plan_context as _tc_week_plan_context, local_today as _tc_local_today
+            from services.training_readiness import build_training_readiness as _tc_build_training_readiness
+            _tc_rides = load_historical_for_context(_tc_user, _tc_rider, DATA_FILE, load_rider_rides)
+            _tc_profile = load_profile_for_context(_tc_user, _tc_rider, PROFILE_FILE, load_rider_profile)
+            _tc_sleep = load_wearable_sleep_for_rider(_tc_user, _tc_rider, get_rider_data_path)
+            _tc_today = _tc_local_today()
+            _tc_readiness = _tc_build_training_readiness(
+                rides=_tc_rides,
+                feedback=_tc_feedback,
+                sleep_records=_tc_sleep,
+                profile=_tc_profile,
+                compute_daily_pmc_func=compute_daily_pmc,
+                today=_tc_today,
+            )
+            _tc_baseline_ctx = _tc_week_plan_context(_tc_today, readiness=None)
+            _tc_gated_ctx = _tc_week_plan_context(_tc_today, readiness=_tc_readiness)
+            st.session_state["tc_v2_feedback_impact"] = _tc_build_feedback_impact_notice(
+                entry=_tc_entry,
+                readiness=_tc_readiness,
+                baseline_ctx=_tc_baseline_ctx,
+                gated_ctx=_tc_gated_ctx,
+            )
+        except Exception:
+            st.session_state["tc_v2_feedback_impact"] = {
+                "level": "已保存",
+                "headline": "今日反馈已记录",
+                "entry_summary": "已记录今日状态",
+                "reason": "反馈已保存，页面会重新读取状态。",
+                "impact": "本次影响摘要暂时无法生成，请查看训练计划页确认课表。",
+                "actions": [],
+                "change_count": 0,
+            }
+        st.session_state.pop("ai_diagnosis", None)
+        st.session_state.pop("ai_signature", None)
+    st.query_params.clear()
+    st.query_params["nav"] = "状态与恢复"
+    st.query_params["sub"] = "恢复睡眠"
+    st.query_params["saved"] = "v2-feedback"
+    st.rerun()
+
+if nav_section == "训练计划" and _v2_plan_save_action == "save-settings":
+    from services.plan_preferences import DAY_ORDER as _TC_DAY_ORDER, load_current_plan_prefs as _tc_load_plan_prefs, save_current_plan_prefs as _tc_save_plan_prefs
+    _tc_training_days = [d for d in _TC_DAY_ORDER if d in _tc_query_values("training_days")]
+    _tc_no_hard_days = [d for d in _TC_DAY_ORDER if d in _tc_query_values("no_hard_days") and d in _tc_training_days]
+    _tc_preferred_long_day = str(st.query_params.get("preferred_long_day") or "")
+    if len(_tc_training_days) >= 3:
+        _tc_current = _tc_load_plan_prefs()
+        if _tc_preferred_long_day not in _tc_training_days:
+            _tc_preferred_long_day = "周日" if "周日" in _tc_training_days else _tc_training_days[-1]
+        _tc_goal = str(st.query_params.get("goal") or _tc_current.get("goal") or "提升 FTP / 阈值能力")
+        _tc_event_type = str(st.query_params.get("event_type") or _tc_current.get("event_type") or "无比赛")
+        _tc_event_date = str(st.query_params.get("event_date") or _tc_current.get("event_date") or "").strip()
+        _tc_event_priority = str(st.query_params.get("event_priority") or _tc_current.get("event_priority") or "B")
+        _tc_save_plan_prefs({**_tc_current, "training_days": _tc_training_days, "preferred_long_day": _tc_preferred_long_day, "no_hard_days": _tc_no_hard_days, "goal": _tc_goal, "event_type": _tc_event_type, "event_date": _tc_event_date, "event_priority": _tc_event_priority})
+        st.query_params.clear()
+        st.query_params["nav"] = "训练计划"
+        st.query_params["sub"] = "本周课表"
+        st.query_params["saved"] = "plan-settings"
+        st.rerun()
+
+_v2_upload_action = nav_section == "上传与诊断" and _v2_action in ("upload-fit", "connect-icu")
+_v2_upload_subpage = nav_section == "上传与诊断" and query_page in ("AI 诊断", "平台导入")
+_v2_plan_action = nav_section == "训练计划" and _v2_action in ("export-week", "export-1")
+if nav_section in v2_primary_routes and not _v2_upload_action and not _v2_upload_subpage and not _v2_plan_action:
+    _v2_help_routes = {"反馈": "feedback", "隐私": "help_privacy", "FIT说明": "help_import", "updates": "help_update"}
+    _v2_route = _v2_help_routes.get(query_page, "help") if nav_section == "帮助 · 隐私 · 更新" else "fueling" if nav_section == "状态与恢复" and query_page == "营养补给" else v2_primary_routes[nav_section]
+    if nav_section == "骑手档案":
+        try:
+            _v2_user = st.session_state.get("user") or {}
+            _v2_rider = st.session_state.get("rider") or "默认骑手"
+            _v2_profile = load_rider_profile(_v2_user.get("user_id", ""), _v2_rider) if _v2_user else {}
+        except Exception:
+            _v2_profile = {}
+        render_v2_page("profile", profile=_v2_profile, load_rider_profile=load_rider_profile)
+    else:
+        def _v2_load_feedback_early():
+            _user = st.session_state.get("user")
+            _rider = st.session_state.get("rider", "默认骑手")
+            return load_feedback_for_rider(_user, _rider, get_rider_data_path, get_user_dir, trim_rides_to_recent_weeks)
+        def _v2_load_profile_early():
+            _user = st.session_state.get("user")
+            _rider = st.session_state.get("rider", "默认骑手")
+            return load_profile_for_context(_user, _rider, PROFILE_FILE, load_rider_profile)
+        def _v2_load_rides_early():
+            _user = st.session_state.get("user")
+            _rider = st.session_state.get("rider", "默认骑手")
+            return load_historical_for_context(_user, _rider, DATA_FILE, load_rider_rides)
+        def _v2_load_sleep_early():
+            _user = st.session_state.get("user")
+            _rider = st.session_state.get("rider", "默认骑手")
+            return load_wearable_sleep_for_rider(_user, _rider, get_rider_data_path)
+        render_v2_page(_v2_route, load_feedback=_v2_load_feedback_early, load_profile=_v2_load_profile_early, load_rides=_v2_load_rides_early, load_sleep=_v2_load_sleep_early, compute_daily_pmc_func=compute_daily_pmc)
+    st.stop()
+
+st.sidebar.markdown("""
+<style>
+[data-testid="stSidebar"] { width: 316px !important; min-width:316px !important; }
+[data-testid="stSidebar"] .stButton > button {
+    justify-content:flex-start !important;
+    min-height:2.95rem !important;
+    border-radius:16px !important;
+    margin:.08rem 0 !important;
+    font-size:.94rem !important;
+    letter-spacing:-.01em !important;
+}
+[data-testid="stSidebar"] [data-testid="baseButton-primary"] {
+    background:#15100c !important;
+    color:#f4f0ea !important;
+    border:1px solid #4a2b1c !important;
+    box-shadow:inset 3px 0 0 #f06f32, 0 10px 24px rgba(240,111,50,.10) !important;
+}
+[data-testid="stSidebar"] [data-testid="baseButton-secondary"] {
+    background:transparent !important;
+    color:#a7a19a !important;
+    border:1px solid transparent !important;
+    box-shadow:none !important;
+}
+.tc-v2-side-kicker{color:#5c3524;font-family:'SF Mono','JetBrains Mono',monospace;font-size:.72rem;font-weight:850;letter-spacing:.12em;margin:.8rem 0 .45rem}.tc-v2-side-foot{margin:.9rem 0;color:#67645f;font-size:.78rem;line-height:1.45}.tc-v2-side-status{background:#080a0d;border:1px solid #211b16;border-radius:18px;padding:.85rem .9rem;margin:.8rem 0;color:#a7a19a;font-size:.82rem;line-height:1.55}.tc-v2-side-status b{color:#f4f0ea}.tc-v2-side-sub button{font-size:.82rem!important;min-height:2.25rem!important;border-radius:14px!important;padding-left:.6rem!important}
+</style>
+""", unsafe_allow_html=True)
+st.sidebar.markdown('<div class="tc-v2-side-kicker">PRECISION COACH</div>', unsafe_allow_html=True)
 for name in section_names:
     is_active = name == nav_section
     if st.sidebar.button(name, key=f"nav_btn_{name}", use_container_width=True, type=("primary" if is_active else "secondary")):
@@ -1403,19 +1706,17 @@ for name in section_names:
 
 visible_subs = [(lbl, emoji) for lbl, emoji in sub_pages if lbl != "训练课表"]
 if len(visible_subs) > 1:
-    st.sidebar.markdown('<div class="tc-nav-kicker">Detail</div>', unsafe_allow_html=True)
-    cols = st.sidebar.columns(2)
-    for i, (label, _) in enumerate(visible_subs):
+    st.sidebar.markdown('<div class="tc-v2-side-kicker">DETAIL</div><div class="tc-v2-side-sub">', unsafe_allow_html=True)
+    for label, _ in visible_subs:
         active = label == query_page
-        if cols[i % len(cols)].button(label, key=f"sub_btn_{nav_section}_{label}", use_container_width=True, type=("primary" if active else "secondary")):
+        if st.sidebar.button(label, key=f"sub_btn_{nav_section}_{label}", use_container_width=True, type=("primary" if active else "secondary")):
             _set_nav(nav_section, label)
             st.rerun()
+    st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
+st.sidebar.markdown('<div class="tc-v2-side-foot">慢下来 · 成为自己的节奏<br>简报 → 诊断 → 计划 → 恢复</div>', unsafe_allow_html=True)
 
-st.sidebar.caption("FLOW 01 · 档案 → 导入 → 分析 → 建议")
-
-if nav_section == "导入数据":
-    st.sidebar.divider()
+if nav_section == "上传与诊断":
     up_count = len(st.session_state.get('last_import_rides') or st.session_state.get('uploaded_rides', []))
     try:
         hi_count = len(load_rider_rides(st.session_state.user["user_id"], st.session_state.get("rider", "默认骑手")))
@@ -1427,10 +1728,8 @@ if nav_section == "导入数据":
     last_fit_sig = st.session_state.get("last_fit_upload_sig")
     fit_upload_busy = bool(st.session_state.get("fit_upload_busy") or (pending_fit_sig and pending_fit_sig != last_fit_sig))
     clear_disabled = import_busy or fit_upload_busy
-    with st.sidebar.expander("数据状态", expanded=True):
-        c_up, c_hi = st.columns(2)
-        c_up.metric("本次", f"{up_count}条")
-        c_hi.metric("历史", f"{hi_count}条")
+    with st.sidebar.expander("数据状态", expanded=False):
+        st.markdown(f'<div class="tc-v2-side-status"><b>数据范围</b><br>本次 {up_count} 条 · 历史 {hi_count} 条</div>', unsafe_allow_html=True)
         if import_busy:
             st.warning("正在导入,暂时不能清除数据。")
         if fit_upload_busy:
@@ -1455,7 +1754,6 @@ if nav_section == "导入数据":
             st.success("已清除当前骑手历史存档。")
             st.rerun()
 
-st.sidebar.divider()
 
 # ─── Rider Selector ───
 user = st.session_state.user
@@ -1479,6 +1777,16 @@ try:
     _sidebar_history_count = len(load_rider_rides(user["user_id"], st.session_state.get("rider", "默认骑手")))
 except Exception:
     _sidebar_history_count = 0
+st.session_state["tc_sidebar_history_count"] = _sidebar_history_count
+
+pending_v2_rider = st.query_params.get("tc_rider")
+if pending_v2_rider and pending_v2_rider in riders and pending_v2_rider != st.session_state.get("rider"):
+    st.session_state.rider = pending_v2_rider
+    st.cache_data.clear()
+    st.query_params.pop("tc_rider", None)
+    st.rerun()
+elif pending_v2_rider:
+    st.query_params.pop("tc_rider", None)
 
 if len(riders) > 1:
     current = st.session_state.get("rider", riders[0])
@@ -1491,9 +1799,9 @@ if len(riders) > 1:
         st.cache_data.clear()
         st.rerun()
 else:
-    st.sidebar.caption(f"当前骑手 · {st.session_state.get('rider', '默认骑手')}")
+    st.sidebar.markdown(f'<div class="tc-v2-side-status"><b>当前骑手</b><br>{st.session_state.get("rider", "默认骑手")}</div>', unsafe_allow_html=True)
 
-with st.sidebar.expander("账户", expanded=False):
+with st.sidebar.expander("账户与套餐", expanded=False):
     st.caption(f"{user['phone'][:3]}****{user['phone'][-4:]}")
     st.caption(f"{plan_info['name']} · {len(riders)}/{plan_info['riders']}骑手")
     if remaining > 0 and remaining < 9999:
@@ -2273,7 +2581,11 @@ def generate_diagnosis(rides, ftp, best, weight=69, feedback=None, sleep_records
 
 # ─── Pages ───
 
-if page == "🏠 功能说明":
+if nav_section == "训练计划" and not st.query_params.get("action"):
+    render_v2_page("plan")
+elif nav_section == "状态与恢复":
+    render_v2_page("recovery")
+elif page == "🏠 功能说明":
     render_home_page()
 
 elif page == "📌 更新日志":

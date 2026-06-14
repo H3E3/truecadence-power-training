@@ -171,6 +171,7 @@ def add_rider(user_id: str, rider_name: str) -> tuple[bool, str]:
         "id": f"r_{user_id}_{abs(hash(rider_name)) % 1000000:06d}",
         "created": datetime.date.today().isoformat(),
     }
+    u["active_rider"] = rider_name
     save_users(users)
     return True, "添加成功"
 

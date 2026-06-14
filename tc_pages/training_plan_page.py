@@ -8,6 +8,7 @@ import zipfile
 
 import pandas as pd
 import streamlit as st
+from tc_pages.v2.router import render_v2_page
 
 from ui_components import (
     render_empty_data_state,
@@ -58,7 +59,78 @@ def render_training_plan_page(
     DATA_DIR,
     PLAN_HARD_KINDS,
 ):
-    require_plan(1, "📋 训练课表")
+    action = st.query_params.get("action")
+    if isinstance(action, list):
+        action = action[0] if action else None
+    if action != "settings":
+        require_plan(1, "📋 训练课表")
+    if not action:
+        render_v2_page("plan")
+        st.stop()
+    if action != "settings":
+        render_v2_page("plan")
+    st.markdown("""
+<style>
+.tc-native-panel { max-width:1188px; margin: -4.5rem 80px 4rem 330px; background:#090b0f; border:1.4px solid #3a2a22; border-radius:30px; padding:30px 32px; color:#f4f0ea; box-shadow:0 14px 18px rgba(0,0,0,.28); }
+.tc-native-panel h3 { margin:0 0 .6rem; font-size:1.35rem; }
+.tc-native-panel .hint { color:#a7a19a; margin-bottom:1rem; }
+</style>
+<div class="tc-native-panel"><h3>训练计划功能</h3><div class="hint">当前动作已接入新版功能面板，不加载旧版页面卡片。可以继续生成、查看详情或导出训练文件。</div>
+""", unsafe_allow_html=True)
+
+    if action == "settings":
+        plan_prefs = load_plan_prefs()
+        day_order = ['周一','周二','周三','周四','周五','周六','周日']
+        default_training_days = [d for d in plan_prefs.get("training_days", PLAN_PREF_DEFAULTS["training_days"]) if d in day_order] or PLAN_PREF_DEFAULTS["training_days"]
+        st.subheader("课表设置：可训练日 / 休息日")
+        st.caption("这里决定系统每周哪些天可以安排训练；未选择的日期就是休息日，今日训练建议也会同步遵守。")
+        with st.form("tc_v2_plan_settings_form", border=False):
+            selected_training_days = st.multiselect(
+                "可训练日",
+                day_order,
+                default=default_training_days,
+                help="选择你通常能训练的日期。未选日期显示为休息日。",
+                key="tc_v2_training_days_settings",
+            )
+            selected_training_days = [d for d in day_order if d in selected_training_days]
+            if selected_training_days:
+                saved_long_day = plan_prefs.get("preferred_long_day", PLAN_PREF_DEFAULTS["preferred_long_day"])
+                preferred_long_day = st.selectbox(
+                    "长距离日",
+                    selected_training_days,
+                    index=(selected_training_days.index(saved_long_day) if saved_long_day in selected_training_days else (selected_training_days.index('周日') if '周日' in selected_training_days else len(selected_training_days)-1)),
+                    help="长距离/Z2容量/模拟课会优先放在这一天。",
+                    key="tc_v2_long_day_settings",
+                )
+                saved_no_hard_days = [d for d in plan_prefs.get("no_hard_days", []) if d in selected_training_days]
+                no_hard_days = st.multiselect(
+                    "不安排高强度日",
+                    selected_training_days,
+                    default=saved_no_hard_days,
+                    help="这些天仍可安排 Z2、恢复、技术骑，但会尽量避开阈值、VO2、冲刺等质量课。",
+                    key="tc_v2_no_hard_days_settings",
+                )
+            else:
+                preferred_long_day = PLAN_PREF_DEFAULTS["preferred_long_day"]
+                no_hard_days = []
+            rest_days = [d for d in day_order if d not in selected_training_days]
+            st.caption("休息日：" + ("、".join(rest_days) if rest_days else "无；系统仍会安排恢复/轻松日，不建议每天都高强度。"))
+            submitted = st.form_submit_button("保存课表设置", type="primary", use_container_width=True)
+        if submitted:
+            if len(selected_training_days) < 3:
+                st.warning("请至少选择 3 个可训练日，否则课表无法保证关键课、耐力课和恢复之间的基本结构。")
+            else:
+                save_plan_prefs({
+                    **plan_prefs,
+                    "training_days": selected_training_days,
+                    "preferred_long_day": preferred_long_day,
+                    "no_hard_days": no_hard_days,
+                    "updated_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                })
+                st.success("已保存。今日训练建议和本周课表会按新的可训练日 / 休息日滚动。")
+                st.link_button("返回本周课表", "?nav=训练计划&sub=本周课表", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.stop()
 
     uploaded_rides, historical, use_all, rides, source_label = render_plan_source_scope(select_ride_scope, merge_rides)
     rides.sort(key=lambda x: x['date'])
@@ -84,9 +156,11 @@ def render_training_plan_page(
     wkg = round(ftp / weight, 1) if ftp and weight else 0
 
     render_plan_builder_styles()
-    render_plan_builder_intro()
+    render_v2_plan()
 
-    PLAN_GOAL_OPTIONS = [
+    with st.expander("调整计划设置", expanded=False):
+
+        PLAN_GOAL_OPTIONS = [
         "恢复体能 / 重建基础",
         "减脂减重 / 燃脂骑",
         "提升 FTP / 功体比",
@@ -221,9 +295,9 @@ def render_training_plan_page(
             help="这些天仍可安排 Z2、恢复、技术骑,但会尽量避开阈值、VO2、冲刺等质量课。",
             key="plan_no_hard_days_select_v2",
         )
-    fixed_rest_days = [d for d in day_order if d not in selected_training_days]
-    if fixed_rest_days:
-        st.caption(f"实际训练日:{days} 天 | 固定休息日:" + "、".join(fixed_rest_days) + f" | 长距离优先:{preferred_long_day}")
+    rest_days = [d for d in day_order if d not in selected_training_days]
+    if rest_days:
+        st.caption(f"实际训练日:{days} 天 | 休息日:" + "、".join(rest_days) + f" | 长距离优先:{preferred_long_day}")
     else:
         st.caption(f"实际训练日:7 天 | 长距离优先:{preferred_long_day}。系统仍会安排恢复/轻松日,不建议每天都高强度。")
 
@@ -545,10 +619,10 @@ def render_training_plan_page(
         plan_logic_points.append(f"调整依据:{evidence_text}")
 
     st.markdown(f"""
-    <div style="border:1px solid rgba(255,107,53,.32);border-radius:16px;padding:1.05em 1.15em;margin:.9em 0 1em;background:linear-gradient(135deg,rgba(255,107,53,.14),rgba(22,27,34,.96));">
-      <div style="color:#ff9a68;font-size:.76em;font-weight:850;letter-spacing:.10em;margin-bottom:.35em;">PLAN LOGIC</div>
-      <div style="color:#f0f6fc;font-size:1.20em;font-weight:820;margin-bottom:.35em;">{plan_logic_title}</div>
-      <div style="color:#aab6c3;font-size:.90em;line-height:1.7;">{plan_logic_main}</div>
+    <div class="plan-brief">
+      <div class="eyebrow">WHY THIS WEEK</div>
+      <div class="title">{plan_logic_title}</div>
+      <div class="body">{plan_logic_main}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -566,9 +640,18 @@ def render_training_plan_page(
     if hours >= 16:
         st.markdown('<div class="plan-warning">⚠️ 你设置的周总量偏高。系统会优先保护强度课质量,并把额外时间放进 Z2 / 长距离;如果睡眠、腿疲劳或经期状态不好,建议下调 10-25%。</div>', unsafe_allow_html=True)
 
+    first_sessions = [x for x in first['rows'] if not x.get('rest')][:3]
+    if first_sessions:
+        cards_html = []
+        for idx, item in enumerate(first_sessions, 1):
+            dur = item.get('dur_h', 0)
+            dur_display = f"{dur:.1f}h" if dur > 0 else "休息"
+            cards_html.append(f'<div class="plan-session"><div class="code">SESSION {idx:02d}</div><div class="dow">{item["day"]}</div><div class="name">{item["name"]}</div><div class="detail">目的：{item["detail"]}<br>注意：睡眠差、腿沉或疼痛时，先降级为 Z1/Z2 或缩短时长。</div><span class="plan-pill">⏱ {dur_display}</span><span class="plan-pill">TSS ~{int(item.get("planned_tss", 0) or 0)}</span></div>')
+        st.markdown('<div class="plan-session-grid">' + ''.join(cards_html) + '</div>', unsafe_allow_html=True)
+
     for week in all_weeks:
-        title = f"第 {week['wk']} 周 · {week['theme']} | 目标 {week['target_h']:.1f}h | 实际 {week['actual_h']:.1f}h | 约 {week['tss']} TSS"
-        with st.expander(title, expanded=(week['wk']==1)):
+        title = f"专业负荷详情 · 第 {week['wk']} 周 · {week['theme']} | 目标 {week['target_h']:.1f}h | 实际 {week['actual_h']:.1f}h | 约 {week['tss']} TSS"
+        with st.expander(title, expanded=False):
             st.caption("周主题:" + week.get('theme_desc', ''))
             bars = ''.join(f'<span style="display:inline-block;width:{max(7,int((x.get("dur_h",0)/max(week["actual_h"],0.1))*100))}%;height:6px;background:{zone_style(x["kind"])[1]};border-radius:2px;margin:0 1px;" title="{x["day"]}: {x["name"]}"></span>' for x in week['rows'] if not x.get('rest'))
             st.markdown(f'<div style="display:flex;gap:2px;margin:.2em 0 .8em;">{bars}</div>', unsafe_allow_html=True)

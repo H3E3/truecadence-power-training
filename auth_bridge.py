@@ -18,6 +18,9 @@ from pathlib import Path
 from http import HTTPStatus
 from urllib.parse import parse_qs, urlparse
 
+from auth import load_users
+from services.rider_profile_service import save_rider_profile_from_payload
+
 HOST = "127.0.0.1"
 DEFAULT_PORT = int(os.environ.get("TC_AUTH_BRIDGE_PORT", "8503"))
 APP_DIR = Path(__file__).resolve().parent
@@ -84,6 +87,28 @@ def _parse_iso(value: str) -> datetime.datetime | None:
 
 def _hash_token(token: str) -> str:
     return hashlib.sha256(f"{token}:truecadence-session".encode("utf-8")).hexdigest()
+
+
+def _cors_origin() -> str:
+    return os.environ.get("TC_APP_URL", "http://127.0.0.1:8502/").rstrip("/")
+
+
+def _public_user_from_token(token: str) -> dict | None:
+    if not token:
+        return None
+    sessions = _load_json(SESSION_FILE)
+    row = sessions.get(_hash_token(token))
+    if not isinstance(row, dict) or row.get("revoked_at"):
+        return None
+    expires_at = _parse_iso(row.get("expires_at", ""))
+    if not expires_at or expires_at <= _utc_now():
+        return None
+    user_id = row.get("user_id", "")
+    users = load_users()
+    user_data = users.get(user_id)
+    if not isinstance(user_data, dict):
+        return None
+    return {"user_id": user_id, **user_data}
 
 
 def _load_json(path: Path) -> dict:
@@ -157,6 +182,60 @@ class AuthBridgeHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
+
+    def _json_response(self, data: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
+        body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Access-Control-Allow-Origin", _cors_origin())
+        self.send_header("Access-Control-Allow-Credentials", "true")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self.send_header("Access-Control-Allow-Origin", _cors_origin())
+        self.send_header("Access-Control-Allow-Credentials", "true")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.end_headers()
+
+    def _cookie_value(self, name: str) -> str:
+        cookie_header = self.headers.get("Cookie", "")
+        for part in cookie_header.split(";"):
+            if "=" not in part:
+                continue
+            key, value = part.strip().split("=", 1)
+            if key == name:
+                return value
+        return ""
+
+    def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        route_path = _route_path(parsed.path)
+        if route_path != "/api/rider-profile/save":
+            self.send_error(HTTPStatus.NOT_FOUND, "not found")
+            return
+        user = _public_user_from_token(self._cookie_value(SESSION_COOKIE_NAME))
+        if not user:
+            self._json_response({"ok": False, "error": "not_authenticated"}, HTTPStatus.UNAUTHORIZED)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0") or "0")
+            raw = self.rfile.read(min(length, 1024 * 64))
+            payload = json.loads(raw.decode("utf-8")) if raw else {}
+        except Exception:
+            self._json_response({"ok": False, "error": "invalid_json"}, HTTPStatus.BAD_REQUEST)
+            return
+        ok, result, status_code = save_rider_profile_from_payload(user, payload)
+        if not ok:
+            self._json_response({"ok": False, **result}, HTTPStatus(status_code))
+            return
+        self._json_response({"ok": True, **result})
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
